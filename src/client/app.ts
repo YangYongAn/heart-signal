@@ -135,7 +135,8 @@ class App {
           e.preventDefault();
           this.switchMode(ECGMode.MUSIC);
           break;
-        case 'escape':
+        case 'tab':
+          e.preventDefault();
           this.switchMode(ECGMode.NORMAL);
           break;
         case 'f':
