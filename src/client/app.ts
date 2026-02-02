@@ -7,6 +7,7 @@ import { WSClient } from './classes/WSClient';
 import { SoundEffects } from './classes/SoundEffects';
 import { AudioAnalyzer } from './classes/AudioAnalyzer';
 import { LyricsManager } from './classes/LyricsManager';
+import { DanmakuManager } from './classes/DanmakuManager';
 
 /**
  * 应用主类
@@ -18,6 +19,7 @@ class App {
   private soundEffects = new SoundEffects();
   private waveGenerator = new ECGWaveGenerator();
   private lyricsManager = new LyricsManager();
+  private danmakuManager: DanmakuManager;
   private interactionCount = 0;
   private currentBPM = 72;
   private lastDisplayedBPM = -1;
@@ -30,6 +32,7 @@ class App {
 
   constructor() {
     this.ecg = new ECGRenderer('ecg-canvas', ECGMode.NORMAL);
+    this.danmakuManager = new DanmakuManager('danmaku-container', 15);
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws`;
@@ -164,6 +167,13 @@ class App {
     // 立即更新显示，确保视觉反馈最快
     this.updateModeDisplay();
 
+    // 广播模式变化到所有连接的客户端
+    this.ws.send({
+      type: 'modeChange',
+      data: { mode: this.currentMode },
+      timestamp: Date.now(),
+    });
+
     this.ecg.setMode(mode);
 
     if (prevMode === ECGMode.MUSIC) {
@@ -286,6 +296,12 @@ class App {
       case 'interaction':
         this.interactionCount++;
         this.updateInteractions();
+        break;
+
+      case 'danmaku':
+        if (message.data) {
+          this.danmakuManager.addDanmaku(message.data);
+        }
         break;
 
       case 'connect':

@@ -5,12 +5,20 @@ import { CLIENT_BUILD_ENTRY, CLIENT_BUILD_TARGET } from '../config/config';
  * 处理动态 TypeScript 编译
  */
 async function handleBuild(pathname: string): Promise<Response | null> {
-  if (pathname !== '/app.js') {
+  let entrypoint: string | null = null;
+
+  if (pathname === '/app.js') {
+    entrypoint = CLIENT_BUILD_ENTRY;
+  } else if (pathname === '/mobile.js') {
+    entrypoint = './src/client/mobile.ts';
+  }
+
+  if (!entrypoint) {
     return null;
   }
 
   const result = await Bun.build({
-    entrypoints: [CLIENT_BUILD_ENTRY],
+    entrypoints: [entrypoint],
     target: CLIENT_BUILD_TARGET,
   });
 
