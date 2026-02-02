@@ -54,6 +54,23 @@ const server = Bun.serve({
       });
     }
 
+    // 提供音乐文件
+    if (url.pathname === '/music.wav') {
+      const file = Bun.file('./assets/music.wav');
+      const exists = await file.exists();
+
+      if (!exists) {
+        return new Response('Music file not found', { status: 404 });
+      }
+
+      return new Response(file, {
+        headers: {
+          'Content-Type': 'audio/wav',
+          'Accept-Ranges': 'bytes',
+        },
+      });
+    }
+
     return new Response('Not Found', { status: 404 });
   },
 

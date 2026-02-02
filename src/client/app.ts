@@ -1,6 +1,261 @@
 import type { WSMessage, HeartbeatData, InteractionData } from '../shared/types';
 
 /**
+ * 心电图模式
+ */
+enum ECGMode {
+  NORMAL = 'normal',      // 正常模式
+  EXCITED = 'excited',    // 激动模式（警报）
+  DEATH = 'death',        // 死亡模式
+  MUSIC = 'music'         // 音乐模式
+}
+
+/**
+ * 模式配置
+ */
+interface ModeConfig {
+  color: string;
+  shadowColor: string;
+  lineWidth: number;
+  name: string;
+  background: string;
+}
+
+const MODE_CONFIGS: Record<ECGMode, ModeConfig> = {
+  [ECGMode.NORMAL]: {
+    color: '#ff4757',
+    shadowColor: '#ff4757',
+    lineWidth: 2,
+    name: '正常模式',
+    background: '#111'
+  },
+  [ECGMode.EXCITED]: {
+    color: '#ff6b6b',
+    shadowColor: '#ff0000',
+    lineWidth: 3,
+    name: '激动模式',
+    background: '#1a0000'
+  },
+  [ECGMode.DEATH]: {
+    color: '#999',
+    shadowColor: '#222',
+    lineWidth: 3,
+    name: '死亡模式',
+    background: '#000'
+  },
+  [ECGMode.MUSIC]: {
+    color: '#5f27cd',
+    shadowColor: '#341f97',
+    lineWidth: 2,
+    name: '音乐模式',
+    background: '#0a0a0a'
+  }
+};
+
+/**
+ * 波形参数（用于模式间平滑过渡）
+ */
+interface WaveParams {
+  /** 每 tick 的相位增量，控制心率 */
+  phaseStep: number;
+  /** 整体振幅 (0~1)，死亡模式渐降 */
+  amplitude: number;
+  /** 目标振幅 */
+  targetAmplitude: number;
+  /** 噪声强度 */
+  noise: number;
+  /** QRS 尖峰高度倍率 */
+  qrsGain: number;
+  /** 是否添加额外的谐波丰富度 */
+  harmonics: boolean;
+}
+
+const WAVE_PRESETS: Record<string, Omit<WaveParams, 'amplitude'>> = {
+  normal: {
+    phaseStep: 0.1,
+    targetAmplitude: 1.0,
+    noise: 0,
+    qrsGain: 1.0,
+    harmonics: false
+  },
+  excited: {
+    phaseStep: 0.18,
+    targetAmplitude: 1.0,
+    noise: 0.15,
+    qrsGain: 1.6,
+    harmonics: true
+  },
+  death: {
+    phaseStep: 0.06,
+    targetAmplitude: 0,
+    noise: 0,
+    qrsGain: 1.0,
+    harmonics: false
+  }
+};
+
+/**
+ * 音频分析器
+ */
+class AudioAnalyzer {
+  private audioContext?: AudioContext;
+  private analyser?: AnalyserNode;
+  private dataArray?: Uint8Array;
+  private source?: MediaElementAudioSourceNode;
+  private audio?: HTMLAudioElement;
+
+  async init(audioUrl: string) {
+    try {
+      this.audioContext = new AudioContext();
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 256;
+
+      const bufferLength = this.analyser.frequencyBinCount;
+      this.dataArray = new Uint8Array(bufferLength);
+
+      this.audio = new Audio(audioUrl);
+      this.audio.crossOrigin = 'anonymous';
+      this.audio.loop = true;
+
+      this.source = this.audioContext.createMediaElementSource(this.audio);
+      this.source.connect(this.analyser);
+      this.analyser.connect(this.audioContext.destination);
+
+      await this.audio.play();
+    } catch (error) {
+      console.error('Failed to initialize audio analyzer:', error);
+    }
+  }
+
+  getFrequencyData(): number[] {
+    if (!this.analyser || !this.dataArray) return [];
+    // @ts-expect-error - Uint8Array 类型兼容性问题
+    this.analyser.getByteFrequencyData(this.dataArray);
+    const result: number[] = [];
+    for (let i = 0; i < this.dataArray.length; i++) {
+      result.push((this.dataArray[i] / 255) * 2 - 1);
+    }
+    return result;
+  }
+
+  getAverageVolume(): number {
+    if (!this.analyser || !this.dataArray) return 0;
+    // @ts-expect-error - Uint8Array 类型兼容性问题
+    this.analyser.getByteFrequencyData(this.dataArray);
+    let sum = 0;
+    for (let i = 0; i < this.dataArray.length; i++) {
+      sum += this.dataArray[i];
+    }
+    return (sum / this.dataArray.length) / 255;
+  }
+
+  stop() {
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.currentTime = 0;
+    }
+  }
+}
+
+/**
+ * 心电图音效生成器
+ */
+class SoundEffects {
+  private audioContext?: AudioContext;
+  private alarmOsc?: OscillatorNode;
+  private alarmGain?: GainNode;
+  private flatlineOsc?: OscillatorNode;
+  private flatlineGain?: GainNode;
+
+  private ensureContext() {
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+    }
+    return this.audioContext;
+  }
+
+  playBeep(frequency: number, duration: number, volume: number) {
+    const ctx = this.ensureContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.value = frequency;
+
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  }
+
+  startAlarm() {
+    const ctx = this.ensureContext();
+    const alarmOsc = ctx.createOscillator();
+    const alarmGain = ctx.createGain();
+
+    alarmOsc.type = 'square';
+    alarmOsc.frequency.value = 440;
+    alarmGain.gain.value = 0.08;
+
+    const now = ctx.currentTime;
+    for (let i = 0; i < 600; i++) {
+      alarmOsc.frequency.setValueAtTime(440, now + i * 0.5);
+      alarmOsc.frequency.setValueAtTime(660, now + i * 0.5 + 0.25);
+    }
+
+    alarmOsc.connect(alarmGain);
+    alarmGain.connect(ctx.destination);
+    alarmOsc.start();
+
+    this.alarmOsc = alarmOsc;
+    this.alarmGain = alarmGain;
+  }
+
+  stopAlarm() {
+    if (this.alarmOsc) {
+      try { this.alarmOsc.stop(); } catch {}
+      this.alarmOsc = undefined;
+    }
+    this.alarmGain = undefined;
+  }
+
+  /**
+   * 死亡模式：持续长鸣音（flatline），音量从 0 渐入
+   */
+  startFlatline() {
+    const ctx = this.ensureContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.value = 500;
+
+    // 从静音渐入，模拟心跳消失后长鸣渐响
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 3);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+
+    this.flatlineOsc = osc;
+    this.flatlineGain = gain;
+  }
+
+  stopFlatline() {
+    if (this.flatlineOsc) {
+      try { this.flatlineOsc.stop(); } catch {}
+      this.flatlineOsc = undefined;
+    }
+    this.flatlineGain = undefined;
+  }
+}
+
+/**
  * 心电图绘制器
  */
 class ECGRenderer {
@@ -9,6 +264,8 @@ class ECGRenderer {
   private dataPoints: number[] = [];
   private maxPoints = 200;
   private animationId?: number;
+  private mode: ECGMode = ECGMode.NORMAL;
+  private alarmFlash = false;
 
   constructor(canvasId: string) {
     this.canvas = document.getElementById(canvasId) as HTMLCanvasElement;
@@ -23,9 +280,11 @@ class ECGRenderer {
     this.canvas.height = rect.height;
   }
 
-  /**
-   * 添加新的数据点
-   */
+  setMode(mode: ECGMode) {
+    this.mode = mode;
+    // 不清空数据点，保持波形连续
+  }
+
   addDataPoint(value: number) {
     this.dataPoints.push(value);
     if (this.dataPoints.length > this.maxPoints) {
@@ -33,27 +292,35 @@ class ECGRenderer {
     }
   }
 
-  /**
-   * 绘制心电图
-   */
+  setDataPoints(points: number[]) {
+    this.dataPoints = points.slice(-this.maxPoints);
+  }
+
   render() {
     const { width, height } = this.canvas;
     const ctx = this.ctx;
+    const config = MODE_CONFIGS[this.mode];
 
-    // 清空画布
-    ctx.fillStyle = '#111';
+    ctx.fillStyle = config.background;
     ctx.fillRect(0, 0, width, height);
 
-    // 绘制网格
+    // 激动模式闪烁
+    if (this.mode === ECGMode.EXCITED) {
+      this.alarmFlash = !this.alarmFlash;
+      if (this.alarmFlash) {
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, width, height);
+      }
+    }
+
     this.drawGrid();
 
-    // 绘制波形
     if (this.dataPoints.length > 1) {
       ctx.beginPath();
-      ctx.strokeStyle = '#ff4757';
-      ctx.lineWidth = 2;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ff4757';
+      ctx.strokeStyle = config.color;
+      ctx.lineWidth = config.lineWidth;
+      ctx.shadowBlur = this.mode === ECGMode.DEATH ? 0 : 10;
+      ctx.shadowColor = config.shadowColor;
 
       const pointSpacing = width / this.maxPoints;
       const midY = height / 2;
@@ -61,7 +328,6 @@ class ECGRenderer {
       for (let i = 0; i < this.dataPoints.length; i++) {
         const x = i * pointSpacing;
         const y = midY - (this.dataPoints[i] * height * 0.4);
-
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
@@ -74,17 +340,13 @@ class ECGRenderer {
     }
   }
 
-  /**
-   * 绘制网格线
-   */
   private drawGrid() {
     const { width, height } = this.canvas;
     const ctx = this.ctx;
 
-    ctx.strokeStyle = '#222';
+    ctx.strokeStyle = this.mode === ECGMode.DEATH ? '#111' : '#222';
     ctx.lineWidth = 1;
 
-    // 垂直线
     for (let x = 0; x < width; x += 20) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -92,7 +354,6 @@ class ECGRenderer {
       ctx.stroke();
     }
 
-    // 水平线
     for (let y = 0; y < height; y += 20) {
       ctx.beginPath();
       ctx.moveTo(0, y);
@@ -100,8 +361,7 @@ class ECGRenderer {
       ctx.stroke();
     }
 
-    // 中心线
-    ctx.strokeStyle = '#333';
+    ctx.strokeStyle = this.mode === ECGMode.DEATH ? '#222' : '#333';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, height / 2);
@@ -109,24 +369,12 @@ class ECGRenderer {
     ctx.stroke();
   }
 
-  /**
-   * 开始渲染循环
-   */
   startRendering() {
     const animate = () => {
       this.render();
       this.animationId = requestAnimationFrame(animate);
     };
     animate();
-  }
-
-  /**
-   * 停止渲染
-   */
-  stopRendering() {
-    if (this.animationId) {
-      cancelAnimationFrame(this.animationId);
-    }
   }
 }
 
@@ -149,7 +397,6 @@ class WSClient {
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
         this.onStatusChange(true);
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
@@ -161,22 +408,16 @@ class WSClient {
         try {
           const message: WSMessage = JSON.parse(event.data);
           this.onMessage(message);
-        } catch (error) {
-          console.error('Failed to parse message:', error);
-        }
+        } catch {}
       };
 
       this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
         this.onStatusChange(false);
         this.scheduleReconnect();
       };
 
-      this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-    } catch (error) {
-      console.error('Failed to create WebSocket:', error);
+      this.ws.onerror = () => {};
+    } catch {
       this.scheduleReconnect();
     }
   }
@@ -184,7 +425,6 @@ class WSClient {
   private scheduleReconnect() {
     if (!this.reconnectTimer) {
       this.reconnectTimer = setTimeout(() => {
-        console.log('Attempting to reconnect...');
         this.connect();
       }, this.reconnectDelay);
     }
@@ -195,14 +435,141 @@ class WSClient {
       this.ws.send(JSON.stringify(message));
     }
   }
+}
 
-  disconnect() {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
+/**
+ * 统一的 ECG 波形生成器
+ * 正常/激动/死亡三种模式共用一条时间线
+ */
+class ECGWaveGenerator {
+  private phase = 0;
+  private params: WaveParams = {
+    phaseStep: 0.1,
+    amplitude: 1.0,
+    targetAmplitude: 1.0,
+    noise: 0,
+    qrsGain: 1.0,
+    harmonics: false
+  };
+  private beeped = false;
+  private lastBeatTime = 0;
+
+  /**
+   * 切换模式参数（波形连续不中断）
+   */
+  setMode(mode: ECGMode) {
+    if (mode === ECGMode.MUSIC) return; // 音乐模式不走这里
+
+    const preset = WAVE_PRESETS[mode];
+    this.params.phaseStep = preset.phaseStep;
+    this.params.targetAmplitude = preset.targetAmplitude;
+    this.params.noise = preset.noise;
+    this.params.qrsGain = preset.qrsGain;
+    this.params.harmonics = preset.harmonics;
+  }
+
+  /**
+   * 生成下一个数据点，返回 { value, beat } beat=true 表示刚好在 QRS 峰
+   */
+  tick(): { value: number; beat: boolean } {
+    // 振幅平滑过渡
+    const ampDiff = this.params.targetAmplitude - this.params.amplitude;
+    this.params.amplitude += ampDiff * 0.02;
+    // 振幅足够小时归零
+    if (this.params.amplitude < 0.01 && this.params.targetAmplitude === 0) {
+      this.params.amplitude = 0;
     }
-    if (this.ws) {
-      this.ws.close();
+
+    this.phase += this.params.phaseStep;
+    const cyclePos = this.phase % (Math.PI * 2);
+    const amp = this.params.amplitude;
+    let beat = false;
+
+    let value = 0;
+
+    // ---- 基础 PQRST 波形 ----
+    // P 波 (0 ~ 0.3)
+    if (cyclePos < 0.3) {
+      value = Math.sin(cyclePos * 10.5) * 0.15;
+      this.beeped = false;
     }
+    // QRS 波群 (0.3 ~ 0.55)
+    else if (cyclePos < 0.55) {
+      const t = cyclePos - 0.3;
+      // Q 下降
+      if (t < 0.05) {
+        value = -0.3 * (t / 0.05);
+      }
+      // R 尖峰
+      else if (t < 0.12) {
+        value = -0.3 + 1.8 * ((t - 0.05) / 0.07);
+      }
+      // S 下降
+      else if (t < 0.18) {
+        value = 1.5 - 1.9 * ((t - 0.12) / 0.06);
+      }
+      // S 回归
+      else {
+        value = -0.4 * (1 - (t - 0.18) / 0.07);
+      }
+
+      value *= this.params.qrsGain;
+
+      if (!this.beeped) {
+        this.beeped = true;
+        beat = true;
+      }
+    }
+    // T 波 (0.55 ~ 0.9)
+    else if (cyclePos < 0.9) {
+      const t = (cyclePos - 0.55) / 0.35;
+      value = Math.sin(t * Math.PI) * 0.25;
+    }
+    // 基线 (0.9 ~ 2PI)
+    // value stays 0
+
+    // ---- 激动模式额外谐波 ----
+    if (this.params.harmonics) {
+      // ST 段抬高（心肌缺血感）
+      if (cyclePos >= 0.55 && cyclePos < 0.9) {
+        value += 0.15;
+      }
+      // 叠加高频颤动
+      value += Math.sin(this.phase * 7) * 0.06;
+      value += Math.sin(this.phase * 13) * 0.04;
+      // 偶尔出现室性早搏 (PVC)
+      if (Math.random() < 0.003 && cyclePos > 1.0) {
+        value += (Math.random() - 0.5) * 1.5;
+      }
+    }
+
+    // ---- 噪声 ----
+    if (this.params.noise > 0) {
+      value += (Math.random() - 0.5) * this.params.noise;
+    }
+
+    // 应用振幅
+    value *= amp;
+
+    // 计算实际 BPM
+    let bpm = 0;
+    if (beat) {
+      const now = Date.now();
+      if (this.lastBeatTime > 0) {
+        const interval = now - this.lastBeatTime;
+        bpm = 60000 / interval;
+      }
+      this.lastBeatTime = now;
+    }
+
+    return { value, beat };
+  }
+
+  getLastBPM(): number {
+    if (this.lastBeatTime === 0) return 0;
+    // 根据 phaseStep 推算
+    const msPerCycle = (Math.PI * 2) / this.params.phaseStep * 20;
+    return Math.round(60000 / msPerCycle);
   }
 }
 
@@ -212,9 +579,15 @@ class WSClient {
 class App {
   private ecg: ECGRenderer;
   private ws: WSClient;
+  private audioAnalyzer?: AudioAnalyzer;
+  private soundEffects = new SoundEffects();
+  private waveGenerator = new ECGWaveGenerator();
   private interactionCount = 0;
   private currentBPM = 72;
   private onlineCount = 0;
+  private currentMode: ECGMode = ECGMode.NORMAL;
+  private ecgInterval?: ReturnType<typeof setInterval>;
+  private musicInterval?: ReturnType<typeof setInterval>;
 
   constructor() {
     this.ecg = new ECGRenderer('ecg-canvas');
@@ -232,74 +605,150 @@ class App {
   }
 
   private init() {
-    // 启动 ECG 渲染
     this.ecg.startRendering();
-
-    // 连接 WebSocket
     this.ws.connect();
+    this.setupKeyboardEvents();
 
-    // 模拟心跳数据生成
-    this.startHeartbeatSimulation();
+    // 启动统一的心电图波形循环（始终运行）
+    this.startECGLoop();
   }
 
   /**
-   * 生成模拟心跳数据
+   * 统一的心电图循环，所有 ECG 模式共享
    */
-  private startHeartbeatSimulation() {
-    let phase = 0;
-    setInterval(() => {
-      // 生成 ECG 波形数据 (模拟 PQRST 波)
-      phase += 0.1;
-      let value = 0;
+  private startECGLoop() {
+    this.ecgInterval = setInterval(() => {
+      // 音乐模式不走波形生成器
+      if (this.currentMode === ECGMode.MUSIC) return;
 
-      // P 波
-      if (phase % (Math.PI * 2) < 0.3) {
-        value = Math.sin(phase * 10) * 0.2;
-      }
-      // QRS 波群
-      else if (phase % (Math.PI * 2) < 0.5) {
-        value = Math.sin((phase % (Math.PI * 2) - 0.3) * 30) * 1.2;
-      }
-      // T 波
-      else if (phase % (Math.PI * 2) < 0.8) {
-        value = Math.sin((phase % (Math.PI * 2) - 0.5) * 10) * 0.3;
-      }
-
+      const { value, beat } = this.waveGenerator.tick();
       this.ecg.addDataPoint(value);
 
-      // 发送心跳数据到服务器
-      if (Math.random() < 0.1) {
-        this.ws.send({
-          type: 'heartbeat',
-          data: { value, timestamp: Date.now() } as HeartbeatData,
-          timestamp: Date.now(),
-        });
+      if (beat) {
+        // QRS 峰到达，播放对应音效
+        if (this.currentMode === ECGMode.NORMAL) {
+          this.soundEffects.playBeep(880, 0.15, 0.3);
+        } else if (this.currentMode === ECGMode.EXCITED) {
+          this.soundEffects.playBeep(1000, 0.08, 0.5);
+        }
+        // 死亡模式振幅太小时不出声
+
+        // 更新 BPM（加自然波动）
+        const baseBPM = this.waveGenerator.getLastBPM();
+        if (baseBPM > 0) {
+          const jitter = this.currentMode === ECGMode.EXCITED ? 8 : 3;
+          this.currentBPM = Math.round(baseBPM + (Math.random() - 0.5) * jitter * 2);
+          if (this.currentMode === ECGMode.DEATH && this.currentBPM < 5) {
+            this.currentBPM = 0;
+          }
+        }
+        this.updateBPM();
       }
     }, 20);
   }
 
+  private setupKeyboardEvents() {
+    window.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'Enter':
+          this.switchMode(ECGMode.EXCITED);
+          break;
+        case 'Backspace':
+          this.switchMode(ECGMode.DEATH);
+          break;
+        case ' ':
+          e.preventDefault();
+          this.switchMode(ECGMode.MUSIC);
+          break;
+        case 'Escape':
+          this.switchMode(ECGMode.NORMAL);
+          break;
+      }
+    });
+  }
+
   /**
-   * 处理 WebSocket 消息
+   * 切换模式
    */
+  private async switchMode(mode: ECGMode) {
+    if (this.currentMode === mode) return;
+
+    const prevMode = this.currentMode;
+    this.currentMode = mode;
+    this.ecg.setMode(mode);
+    this.updateModeDisplay();
+
+    // 停止音乐相关
+    if (prevMode === ECGMode.MUSIC) {
+      if (this.musicInterval) {
+        clearInterval(this.musicInterval);
+        this.musicInterval = undefined;
+      }
+      if (this.audioAnalyzer) {
+        this.audioAnalyzer.stop();
+      }
+    }
+
+    // 停止/启动警报音
+    if (prevMode === ECGMode.EXCITED) {
+      this.soundEffects.stopAlarm();
+    }
+
+    // 停止死亡长鸣
+    if (prevMode === ECGMode.DEATH) {
+      this.soundEffects.stopFlatline();
+    }
+
+    if (mode === ECGMode.MUSIC) {
+      await this.startMusicMode();
+    } else {
+      // 切换波形参数（波形连续）
+      this.waveGenerator.setMode(mode);
+
+      if (mode === ECGMode.EXCITED) {
+        this.soundEffects.startAlarm();
+      }
+      if (mode === ECGMode.DEATH) {
+        this.soundEffects.startFlatline();
+      }
+    }
+  }
+
+  /**
+   * 音乐模式
+   */
+  private async startMusicMode() {
+    this.soundEffects.stopAlarm();
+    const audioUrl = '/music.wav';
+
+    this.audioAnalyzer = new AudioAnalyzer();
+    await this.audioAnalyzer.init(audioUrl);
+
+    this.musicInterval = setInterval(() => {
+      if (this.audioAnalyzer) {
+        const frequencyData = this.audioAnalyzer.getFrequencyData();
+        const points = frequencyData.slice(0, 200);
+        while (points.length < 200) {
+          points.push(0);
+        }
+        this.ecg.setDataPoints(points);
+
+        const volume = this.audioAnalyzer.getAverageVolume();
+        this.currentBPM = Math.round(60 + volume * 100);
+        this.updateBPM();
+      }
+    }, 50);
+  }
+
   private handleMessage(message: WSMessage) {
     switch (message.type) {
-      case 'heartbeat':
-        // 更新 BPM 显示
-        if (message.data) {
-          this.updateBPM(message.data.value);
-        }
-        break;
-
       case 'interaction':
-        // 处理互动
         this.interactionCount++;
         this.updateInteractions();
-        this.triggerInteractionEffect();
         break;
 
       case 'connect':
       case 'disconnect':
-        // 更新在线人数
         if (message.data?.totalClients !== undefined) {
           this.onlineCount = message.data.totalClients;
           this.updateOnlineCount();
@@ -308,9 +757,6 @@ class App {
     }
   }
 
-  /**
-   * 更新连接状态
-   */
   private updateConnectionStatus(connected: boolean) {
     const statusEl = document.getElementById('connection-status');
     if (statusEl) {
@@ -319,20 +765,13 @@ class App {
     }
   }
 
-  /**
-   * 更新 BPM 显示
-   */
-  private updateBPM(value: number) {
-    this.currentBPM = Math.round(60 + value * 40);
+  private updateBPM() {
     const bpmEl = document.getElementById('bpm');
     if (bpmEl) {
       bpmEl.textContent = this.currentBPM.toString();
     }
   }
 
-  /**
-   * 更新互动次数
-   */
   private updateInteractions() {
     const interactionsEl = document.getElementById('interactions');
     if (interactionsEl) {
@@ -340,9 +779,6 @@ class App {
     }
   }
 
-  /**
-   * 更新在线人数
-   */
   private updateOnlineCount() {
     const onlineEl = document.getElementById('online-count');
     if (onlineEl) {
@@ -350,12 +786,13 @@ class App {
     }
   }
 
-  /**
-   * 触发互动效果
-   */
-  private triggerInteractionEffect() {
-    // 可以在这里添加视觉或音效反馈
-    console.log('Interaction received!');
+  private updateModeDisplay() {
+    const modeEl = document.getElementById('current-mode');
+    if (modeEl) {
+      const config = MODE_CONFIGS[this.currentMode];
+      modeEl.textContent = config.name;
+      modeEl.style.color = config.color;
+    }
   }
 }
 
