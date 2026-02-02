@@ -5,4 +5,4 @@ dist/
 .idea/
 
 # 自动生成的歌词文件
-assets/*_lyric.txt
+#assets/*_lyric.txt
