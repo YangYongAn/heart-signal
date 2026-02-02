@@ -5,7 +5,8 @@
   "main": "src/server/index.ts",
   "scripts": {
     "dev": "bun --watch src/server/index.ts",
-    "start": "bun src/server/index.ts",
+    "start": "NODE_ENV=production bun src/server/index.ts",
+    "build": "bun build --target=bun --production --outdir=dist ./src/server/index.ts",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": ["heartbeat", "ecg", "websocket", "stage"],
