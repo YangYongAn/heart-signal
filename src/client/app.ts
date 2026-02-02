@@ -26,6 +26,7 @@ class App {
   private ecgInterval?: ReturnType<typeof setInterval>;
   private musicInterval?: ReturnType<typeof setInterval>;
   private modeEmojiImg?: HTMLImageElement;
+  private hasUserInteracted = false;
 
   constructor() {
     this.ecg = new ECGRenderer('ecg-canvas', ECGMode.NORMAL);
@@ -46,11 +47,26 @@ class App {
     this.preloadEmojiImages();
     this.ecg.startRendering();
     this.ws.connect();
+    this.setupUserInteractionDetection();
     this.setupKeyboardEvents();
     this.updateModeDisplay();
     this.updateBPM();
     await this.lyricsManager.loadLyrics();
     this.startECGLoop();
+  }
+
+  private setupUserInteractionDetection() {
+    const handleInteraction = () => {
+      if (!this.hasUserInteracted) {
+        this.hasUserInteracted = true;
+        // 移除所有交互监听，后续由 setupKeyboardEvents 处理
+        document.removeEventListener('click', handleInteraction);
+        document.removeEventListener('keydown', handleInteraction);
+      }
+    };
+
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
   }
 
   /**
@@ -75,7 +91,7 @@ class App {
       const { value, beat } = this.waveGenerator.tick();
       this.ecg.addDataPoint(value);
 
-      if (beat) {
+      if (beat && this.hasUserInteracted) {
         if (this.currentMode === ECGMode.NORMAL) {
           this.soundEffects.playBeep(880, 0.15, 0.3);
         } else if (this.currentMode === ECGMode.EXCITED) {
@@ -186,11 +202,17 @@ class App {
       if (mode === ECGMode.NORMAL) {
         // 进入正常模式时重置时钟并立即播放一次声音
         this.waveGenerator.resetPhaseToQRS();
-        this.soundEffects.playBeep(880, 0.15, 0.3);
+        if (this.hasUserInteracted) {
+          this.soundEffects.playBeep(880, 0.15, 0.3);
+        }
       } else if (mode === ECGMode.EXCITED) {
-        this.soundEffects.startAlarm();
+        if (this.hasUserInteracted) {
+          this.soundEffects.startAlarm();
+        }
       } else if (mode === ECGMode.DEATH) {
-        this.soundEffects.startFlatline();
+        if (this.hasUserInteracted) {
+          this.soundEffects.startFlatline();
+        }
         this.currentBPM = 0;
         this.updateBPM();
       }
@@ -206,9 +228,12 @@ class App {
     const audioUrl = '/music.wav';
 
     this.audioAnalyzer = new AudioAnalyzer();
-    await this.audioAnalyzer.init(audioUrl, () => {
-      this.switchMode(ECGMode.NORMAL);
-    });
+    // 只有在用户交互后才播放音乐
+    if (this.hasUserInteracted) {
+      await this.audioAnalyzer.init(audioUrl, () => {
+        this.switchMode(ECGMode.NORMAL);
+      });
+    }
 
     let smoothed: number[] = new Array(200).fill(0);
     this.lyricsManager.start();
