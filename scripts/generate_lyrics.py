@@ -47,25 +47,36 @@ def generate_lyrics_from_audio(audio_file_path, to_traditional=False):
                     word_data['word'] = converter.convert(word_data['word'])
         print("✓ 已转换为繁体中文")
 
-    # 提取逐字时间轴
+    # 提取逐字时间轴（基于 segment 分组分句）
     lyrics = []
-    for segment in result['segments']:
+
+    for segment_idx, segment in enumerate(result['segments']):
         if 'words' in segment:
+            # 每个 segment 是一个句子
+            if segment_idx > 0:
+                # 在新 segment 前添加停顿标记
+                lyrics.append({
+                    'char': ' ',  # 空格表示句子边界
+                    'startTime': round(result['segments'][segment_idx - 1]['end'], 3),
+                    'duration': 0
+                })
+
             for word_data in segment['words']:
                 word = word_data['word'].strip()
-                start = word_data['start']
-                end = word_data['end']
-                duration = end - start
+                word_start = word_data['start']
+                word_end = word_data['end']
 
-                # 将每个字分开（中文）
-                for char in word:
-                    char_duration = duration / len(word) if len(word) > 0 else 0
+                # 将词内的字平均分配时间
+                word_duration = word_end - word_start
+                char_start = word_start
+                for i, char in enumerate(word):
+                    char_duration = word_duration / len(word) if len(word) > 0 else 0
                     lyrics.append({
                         'char': char,
-                        'startTime': round(start, 3),
+                        'startTime': round(char_start, 3),
                         'duration': round(char_duration, 3)
                     })
-                    start += char_duration
+                    char_start += char_duration
 
     # 生成输出文件路径（在音频文件同目录）
     audio_dir = os.path.dirname(os.path.abspath(audio_file_path))
@@ -79,6 +90,10 @@ def generate_lyrics_from_audio(audio_file_path, to_traditional=False):
 
     print(f"\n✅ 歌词已保存到: {txt_output}")
     print(f"📊 共 {len(lyrics)} 个字符")
+
+    # 统计句子数
+    num_sentences = sum(1 for item in lyrics if item['char'] == ' ')
+    print(f"📋 共 {num_sentences + 1} 个句子")
 
     # 预览文本格式
     lines = text_format.split('\n')
@@ -94,27 +109,23 @@ def generate_lyrics_from_audio(audio_file_path, to_traditional=False):
 
 
 def lyrics_to_text_format(lyrics):
-    """将歌词转换为文本格式: 字(startTime+duration)字(startTime+duration)..."""
+    """将歌词转换为文本格式: [startTime+duration]字[startTime+duration]字..."""
     lines = []
     current_line = ""
-    prev_end_time = None
 
     for lyric_char in lyrics:
         char = lyric_char['char']
         start_time = lyric_char['startTime']
         duration = lyric_char['duration']
-        end_time = start_time + duration
 
-        # 检查是否有间隙（衔接不上）
-        if prev_end_time is not None and abs(prev_end_time - start_time) > 0.01:
-            # 有间隙，换新行（新句子）
+        # 空格字符表示停顿/间隙，触发换行
+        if char == ' ':
             if current_line:
                 lines.append(current_line)
             current_line = ""
-
-        # 添加字和时间信息
-        current_line += f"{char}({start_time:.2f}+{duration:.2f})"
-        prev_end_time = end_time
+        else:
+            # 添加字和时间信息（时间在前，字在后）
+            current_line += f"[{start_time:.2f}+{duration:.2f}]{char}"
 
     # 添加最后一行
     if current_line:

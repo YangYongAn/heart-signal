@@ -39,16 +39,19 @@ function parseLyricsText(text: string): LyricSentence[] {
 
   for (const line of lines) {
     const chars: LyricChar[] = [];
-    // 匹配 字(time+duration) 格式
-    const regex = /(.)\((\d+\.?\d*)\+(\d+\.?\d*)\)/g;
+    // 匹配 [time+duration]字 格式
+    const regex = /\[(\d+\.?\d*)\+(\d+\.?\d*)\](.)/g;
     let match;
 
     while ((match = regex.exec(line)) !== null) {
-      chars.push({
-        char: match[1],
-        startTime: parseFloat(match[2]),
-        duration: parseFloat(match[3])
-      });
+      // 忽略空格停顿标记，只收集实际的字符
+      if (match[3] !== ' ') {
+        chars.push({
+          char: match[3],
+          startTime: parseFloat(match[1]),
+          duration: parseFloat(match[2])
+        });
+      }
     }
 
     if (chars.length > 0) {
@@ -383,16 +386,19 @@ class LyricsManager {
 
     for (const line of lines) {
       const chars: LyricChar[] = [];
-      // 匹配 字(time+duration) 格式
-      const regex = /(.)\((\d+\.?\d*)\+(\d+\.?\d*)\)/g;
+      // 匹配 [time+duration]字 格式
+      const regex = /\[(\d+\.?\d*)\+(\d+\.?\d*)\](.)/g;
       let match;
 
       while ((match = regex.exec(line)) !== null) {
-        chars.push({
-          char: match[1],
-          startTime: parseFloat(match[2]),
-          duration: parseFloat(match[3])
-        });
+        // 忽略空格停顿标记，只收集实际的字符
+        if (match[3] !== ' ') {
+          chars.push({
+            char: match[3],
+            startTime: parseFloat(match[1]),
+            duration: parseFloat(match[2])
+          });
+        }
       }
 
       if (chars.length > 0) {
