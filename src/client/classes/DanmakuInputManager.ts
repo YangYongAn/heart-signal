@@ -3,9 +3,10 @@
  * 处理用户输入、频率限制、内容验证
  */
 export class DanmakuInputManager {
-  private inputElement: HTMLTextAreaElement;
+  private inputElement: HTMLInputElement;
   private submitButton: HTMLButtonElement;
-  private cooldownTimer: HTMLElement | null;
+  private cooldownOverlay: HTMLElement | null;
+  private cooldownNumber: HTMLElement | null;
   private lastSendTime = 0;
   private cooldownDuration = 3000; // 3 秒冷却时间
   private maxLength = 50; // 最大字符数
@@ -16,11 +17,12 @@ export class DanmakuInputManager {
   constructor(
     inputSelector: string,
     submitButtonSelector: string,
-    cooldownTimerSelector?: string
+    cooldownOverlaySelector?: string
   ) {
-    this.inputElement = document.querySelector(inputSelector) as HTMLTextAreaElement;
+    this.inputElement = document.querySelector(inputSelector) as HTMLInputElement;
     this.submitButton = document.querySelector(submitButtonSelector) as HTMLButtonElement;
-    this.cooldownTimer = cooldownTimerSelector ? document.querySelector(cooldownTimerSelector) : null;
+    this.cooldownOverlay = cooldownOverlaySelector ? document.querySelector(cooldownOverlaySelector) : null;
+    this.cooldownNumber = this.cooldownOverlay ? this.cooldownOverlay.querySelector('.cooldown-number') : null;
 
     if (!this.inputElement || !this.submitButton) {
       throw new Error('找不到输入框或提交按钮');
@@ -36,9 +38,9 @@ export class DanmakuInputManager {
     // 提交按钮点击
     this.submitButton.addEventListener('click', () => this.handleSubmit());
 
-    // 支持 Enter 提交（可选）
+    // Enter 键发送
     this.inputElement.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.ctrlKey) {
+      if (e.key === 'Enter') {
         e.preventDefault();
         this.handleSubmit();
       }
@@ -69,11 +71,6 @@ export class DanmakuInputManager {
     // 清空输入框
     this.inputElement.value = '';
     this.inputElement.focus();
-
-    // 记录发送时间并启动冷却
-    this.lastSendTime = Date.now();
-    this.updateSubmitButton();
-    this.startCooldown();
   }
 
   /**
@@ -136,24 +133,23 @@ export class DanmakuInputManager {
       clearInterval(this.countdownInterval as unknown as number);
     }
 
+    // 显示冷却蒙层
+    if (this.cooldownOverlay) {
+      this.cooldownOverlay.classList.add('active');
+    }
+
     const updateCountdown = () => {
       const remaining = this.getTimeUntilNextSend();
 
       if (remaining > 0) {
-        // 在按钮上显示倒计时
-        this.submitButton.textContent = `${(remaining / 1000).toFixed(1)}s`;
-
-        // 如果有单独的冷却计时器元素，也更新它
-        if (this.cooldownTimer) {
-          this.cooldownTimer.textContent = `${(remaining / 1000).toFixed(1)}s`;
-          this.cooldownTimer.style.display = 'block';
+        // 更新蒙层上的倒计时数字
+        if (this.cooldownNumber) {
+          this.cooldownNumber.textContent = (remaining / 1000).toFixed(1);
         }
       } else {
-        // 恢复按钮文本
-        this.submitButton.textContent = this.submitButtonText;
-
-        if (this.cooldownTimer) {
-          this.cooldownTimer.style.display = 'none';
+        // 隐藏冷却蒙层
+        if (this.cooldownOverlay) {
+          this.cooldownOverlay.classList.remove('active');
         }
 
         if (this.countdownInterval !== null) {
@@ -226,5 +222,14 @@ export class DanmakuInputManager {
   enable() {
     this.inputElement.disabled = false;
     this.updateSubmitButton();
+  }
+
+  /**
+   * 手动触发冷却（用于快捷短语等外部发送）
+   */
+  triggerCooldown() {
+    this.lastSendTime = Date.now();
+    this.updateSubmitButton();
+    this.startCooldown();
   }
 }

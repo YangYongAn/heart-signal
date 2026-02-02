@@ -31,6 +31,12 @@ interface ESNAPI {
    * 短震动
    */
   vibrateShort(): void;
+
+  /**
+   * 设置窗口属性
+   * 仅 iOS 生效
+   */
+  setWinAttr(options: { softInputMode?: 'pan' | 'resize' | 'auto'; softInputBarEnabled?: boolean }): void;
 }
 
 /**

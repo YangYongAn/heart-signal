@@ -1,6 +1,7 @@
 import { SimplifiedECGRenderer } from './classes/SimplifiedECGRenderer';
 import { UserInfoManager } from './classes/UserInfoManager';
 import { DanmakuInputManager } from './classes/DanmakuInputManager';
+import { SimpleDanmakuManager } from './classes/SimpleDanmakuManager';
 import { WSClient } from './classes/WSClient';
 import { ECGWaveGenerator } from './classes/ECGWaveGenerator';
 import { ECGMode } from './types';
@@ -15,6 +16,7 @@ class MobileApp {
   private ecg: SimplifiedECGRenderer;
   private userManager: UserInfoManager;
   private inputManager: DanmakuInputManager;
+  private danmakuManager: SimpleDanmakuManager;
   private ws: WSClient;
   private waveGenerator: ECGWaveGenerator;
   private ecgInterval: number | null = null;
@@ -24,6 +26,12 @@ class MobileApp {
 
   constructor() {
     console.log('[MobileApp] 构造函数被调用');
+
+    // 设置软键盘模式（仅 iOS 生效）
+    if (window.api && window.api.setWinAttr) {
+      window.api.setWinAttr({ softInputMode: 'pan', softInputBarEnabled: false });
+      console.log('[MobileApp] 已设置 softInputMode: pan, softInputBarEnabled: false');
+    }
 
     // 初始化 ECG 渲染器
     this.ecg = new SimplifiedECGRenderer('mobile-ecg-canvas', ECGMode.NORMAL);
@@ -37,9 +45,13 @@ class MobileApp {
     this.inputManager = new DanmakuInputManager(
       '#danmaku-input',
       '#danmaku-submit',
-      '#cooldown-timer'
+      '#cooldown-overlay'
     );
     console.log('[MobileApp] 弹幕输入管理器初始化完成');
+
+    // 初始化弹幕显示管理器
+    this.danmakuManager = new SimpleDanmakuManager('mobile-danmaku-container', 5);
+    console.log('[MobileApp] 弹幕显示管理器初始化完成');
 
     // 初始化波形生成器
     this.waveGenerator = new ECGWaveGenerator();
@@ -176,19 +188,12 @@ class MobileApp {
    */
   private setupEventListeners() {
     // 弹幕输入框内容变化
-    const inputEl = document.getElementById('danmaku-input') as HTMLTextAreaElement;
+    const inputEl = document.getElementById('danmaku-input') as HTMLInputElement;
     inputEl.addEventListener('input', () => {
-      const charCount = document.getElementById('char-count')!;
-      charCount.textContent = String(inputEl.value.length);
-    });
-
-    // 防止输入框获得焦点时页面被拉伸（iOS）
-    inputEl.addEventListener('focus', () => {
-      console.log('[MobileApp] 输入框获得焦点');
-      // 延迟滚动确保软键盘弹出
-      setTimeout(() => {
-        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
+      const charCount = document.getElementById('char-count');
+      if (charCount) {
+        charCount.textContent = String(inputEl.value.length);
+      }
     });
 
     // 弹幕提交
@@ -235,6 +240,9 @@ class MobileApp {
       return;
     }
 
+    // 统一触发冷却遮罩（无论是普通发送还是快捷短语）
+    this.inputManager.triggerCooldown();
+
     // 禁用快捷语按钮
     this.disableQuickPhrases();
 
@@ -243,6 +251,18 @@ class MobileApp {
       this.enableQuickPhrases();
     }, 3000);
 
+    const timestamp = Date.now();
+
+    // 本地上屏预览
+    this.danmakuManager.addDanmaku({
+      userId: user.userId,
+      name: user.name,
+      avatar: user.avatar,
+      content: content,
+      timestamp: timestamp,
+      isQuickPhrase: isQuickPhrase,
+    });
+
     const message: WSMessage = {
       type: 'danmaku',
       data: {
@@ -250,10 +270,10 @@ class MobileApp {
         name: user.name,
         avatar: user.avatar,
         content: content,
-        timestamp: Date.now(),
-        isQuickPhrase,
+        timestamp: timestamp,
+        isQuickPhrase: isQuickPhrase,
       },
-      timestamp: Date.now(),
+      timestamp: timestamp,
     };
 
     this.ws.send(message);
