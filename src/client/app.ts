@@ -196,9 +196,11 @@ class AudioAnalyzer {
   private waveArray?: Uint8Array;
   private source?: MediaElementAudioSourceNode;
   private audio?: HTMLAudioElement;
+  private onEnded?: () => void;
 
-  async init(audioUrl: string) {
+  async init(audioUrl: string, onEnded?: () => void) {
     try {
+      this.onEnded = onEnded;
       this.audioContext = new AudioContext();
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 1024;
@@ -209,7 +211,14 @@ class AudioAnalyzer {
 
       this.audio = new Audio(audioUrl);
       this.audio.crossOrigin = 'anonymous';
-      this.audio.loop = true;
+      this.audio.loop = false; // 只播放一次
+
+      // 监听播放结束事件
+      this.audio.addEventListener('ended', () => {
+        if (this.onEnded) {
+          this.onEnded();
+        }
+      });
 
       this.source = this.audioContext.createMediaElementSource(this.audio);
       this.source.connect(this.analyser);
@@ -1073,7 +1082,10 @@ class App {
     const audioUrl = '/music.wav';
 
     this.audioAnalyzer = new AudioAnalyzer();
-    await this.audioAnalyzer.init(audioUrl);
+    await this.audioAnalyzer.init(audioUrl, () => {
+      // 音乐播放结束，恢复到正常模式
+      this.switchMode(ECGMode.NORMAL);
+    });
 
     // 帧间平滑缓冲
     let smoothed: number[] = new Array(200).fill(0);
