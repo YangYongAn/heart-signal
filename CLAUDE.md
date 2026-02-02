@@ -16,9 +16,9 @@ heart-signal 是一个用于小品表演的大屏幕心电图显示系统。支�
 ## Commands
 
 ```bash
-pnpm dev         # 启动开发服务器（带 HMR）
-pnpm start       # 生产环境启动
-pnpm typecheck   # TypeScript 类型检查
+bun dev         # 启动开发服务器（带 HMR）
+bun start       # 生产环境启动
+bun run typecheck   # TypeScript 类型检查
 ```
 
 开发服务器运行在 http://localhost:3000，WebSocket 端点为 ws://localhost:3000/ws

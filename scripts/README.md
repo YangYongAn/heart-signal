@@ -23,15 +23,15 @@ pip3 install opencc  # 约 1.4MB，用于简繁转换
 **简体中文：**
 ```bash
 cd scripts
-python3 generate_lyrics.py ../assets/music.wav
-# 自动生成: ../assets/music_lyric.txt
+python3 generate_lyrics.py ../public/music.wav
+# 自动生成: ../public/music_lyric.txt
 ```
 
 **繁体中文：**
 ```bash
 cd scripts
-python3 generate_lyrics.py ../assets/music.wav --traditional
-# 自动生成: ../assets/music_lyric.txt (繁体)
+python3 generate_lyrics.py ../public/music.wav --traditional
+# 自动生成: ../public/music_lyric.txt (繁体)
 ```
 
 ### 3. 启动应用
@@ -85,12 +85,12 @@ pnpm dev
 ### 步骤 1: 生成歌词
 
 ```bash
-python3 generate_lyrics.py ../assets/music.wav
+python3 generate_lyrics.py ../public/music.wav
 ```
 
 **输出**：
 ```
-✅ 歌词已保存到: ../assets/music_lyric.txt
+✅ 歌词已保存到: ../public/music_lyric.txt
 📊 共 XX 个字符
 
 📝 文本格式预览（共 2 句）:
@@ -104,7 +104,7 @@ python3 generate_lyrics.py ../assets/music.wav
 
 歌词文件自动生成到：
 ```
-assets/music_lyric.txt
+public/music_lyric.txt
 ```
 
 例如内容如下：
@@ -124,7 +124,7 @@ assets/music_lyric.txt
 pnpm dev
 ```
 
-应用启动时会自动从服务器加载 `assets/music_lyric.txt` 文件。
+应用启动时会自动从服务器加载 `public/music_lyric.txt` 文件。
 
 ### 步骤 4: 完成
 
@@ -155,7 +155,7 @@ model = whisper.load_model("tiny")  # 改为 "base"、"small" 等
 
 ### 手动调整
 
-如果识别不完美，可以手动编辑 `assets/music_lyric.txt`：
+如果识别不完美，可以手动编辑 `public/music_lyric.txt`：
 
 ```
 # 修改前（一个词两个字）

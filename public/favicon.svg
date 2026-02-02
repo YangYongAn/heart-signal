@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- 背景 -->
+  <rect width="192" height="192" fill="#1a1a1a" rx="40"/>
+
+  <!-- 心电图波形 -->
+  <g stroke="#2ed573" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 左平线 -->
+    <path d="M 20 96 L 50 96"/>
+
+    <!-- P 波 (小) -->
+    <path d="M 50 96 Q 55 85 60 96"/>
+
+    <!-- PQ 线 -->
+    <path d="M 60 96 L 75 96"/>
+
+    <!-- QRS 复合波 (大) -->
+    <path d="M 75 96 L 85 75 L 95 96 L 105 45 L 115 96 L 125 80 L 135 96"/>
+
+    <!-- ST 线 -->
+    <path d="M 135 96 L 150 96"/>
+
+    <!-- T 波 -->
+    <path d="M 150 96 Q 157 82 165 96"/>
+
+    <!-- 右平线 -->
+    <path d="M 165 96 L 192 96"/>
+  </g>
+
+  <!-- 心脏符号 (左上角) -->
+  <path d="M 40,55
+           C 40,45 35,40 30,40
+           C 25,40 20,45 20,50
+           C 20,60 30,70 40,80
+           C 50,70 60,60 60,50
+           C 60,45 55,40 50,40
+           C 45,40 40,45 40,55 Z"
+        fill="#ff6b6b" opacity="0.9"/>
+</svg>
