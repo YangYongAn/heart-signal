@@ -1,5 +1,5 @@
 {
-  "build_command": "bun install",
-  "start_command": "bun src/server/index.ts",
+  "build_command": "pnpm install",
+  "start_command": "pnpm start",
   "runtime": "bun"
 }

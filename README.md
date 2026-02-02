@@ -50,6 +50,7 @@
 | 类别 | 技术 |
 |------|------|
 | Runtime | [Bun 1.3.8](https://bun.sh/) |
+| Package Manager | [pnpm 10.4.1](https://pnpm.io/) |
 | Language | TypeScript 7 (native preview) |
 | Server | Bun 内置 HTTP + WebSocket |
 | Frontend | 纯 HTML + Canvas（无框架） |
@@ -90,7 +91,10 @@ heart-signal/
 
 ### 环境要求
 
-- [Bun](https://bun.sh/) 1.3.8+
+- [Node.js](https://nodejs.org/) 18+（用于初始化 Bun）
+- [pnpm](https://pnpm.io/) 10.4.1+
+
+> Bun 运行时已作为项目依赖，无需单独安装。
 
 ### 快速开始
 
@@ -98,16 +102,16 @@ heart-signal/
 # 克隆并安装
 git clone https://github.com/YangYongAn/heart-signal.git
 cd heart-signal
-bun install
+pnpm install
 
 # 开发模式（带 HMR）
-bun dev
+pnpm dev
 
 # 生产模式
-bun start
+pnpm start
 
 # 类型检查
-bun run typecheck
+pnpm typecheck
 ```
 
 开发服务器: **http://localhost:2026**
@@ -142,18 +146,20 @@ WebSocket: **ws://localhost:2026/ws**
 - **CPU**: 1 核心
 - **带宽**: 1Mbps+（支持 WebSocket 长连接）
 
-#### 2. 安装 Bun
+#### 2. 安装 pnpm
 
 ```bash
-# 使用官方安装脚本
-curl -fsSL https://bun.sh/install | bash
+# 安装 pnpm
+curl -fsSL https://get.pnpm.io/install.sh | sh -
 
 # 重载环境变量
 source ~/.bashrc  # 或 source ~/.zshrc
 
 # 验证安装
-bun --version
+pnpm --version
 ```
+
+> **注意**: Bun 运行时已作为项目依赖，无需单独安装。
 
 #### 3. 部署项目
 
@@ -163,11 +169,11 @@ cd /opt
 sudo git clone https://github.com/YangYongAn/heart-signal.git
 cd heart-signal
 
-# 安装依赖
-sudo bun install
+# 安装依赖（自动初始化 Bun）
+sudo pnpm install
 
 # 测试运行（默认端口 2026）
-bun start
+pnpm start
 ```
 
 #### 4. 配置 systemd 服务
@@ -183,10 +189,11 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/opt/heart-signal
-ExecStart=/root/.bun/bin/bun start
+ExecStart=/opt/heart-signal/node_modules/.bin/bun src/server/index.ts
 Restart=always
 RestartSec=10
 Environment="PORT=2026"
+Environment="NODE_ENV=production"
 
 # 日志配置
 StandardOutput=journal
@@ -195,6 +202,8 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 ```
+
+> **注意**: `ExecStart` 路径可能因安装方式不同而异，使用 `which pnpm` 确认实际路径。
 
 启动服务：
 
@@ -316,7 +325,7 @@ sudo firewall-cmd --reload
 ```bash
 cd /opt/heart-signal
 sudo git pull
-sudo bun install
+sudo pnpm install
 sudo systemctl restart heart-signal
 ```
 
@@ -342,7 +351,7 @@ git push origin main
 
 推送后 Zeabur 自动：
 1. 检测 `zbpack.json` 配置
-2. 运行 `bun install`
+2. 运行 `pnpm install`
 3. 设置 `PORT` 环境变量并启动
 4. 分配公网域名
 

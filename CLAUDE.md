@@ -8,7 +8,8 @@ heart-signal 是一个用于小品表演的大屏幕心电图显示系统。支�
 
 ## Tech Stack
 
-- **Runtime**: Bun 1.3.8
+- **Runtime**: Bun 1.3.8（作为项目依赖）
+- **Package Manager**: pnpm 10.4.1
 - **Language**: TypeScript 7 (native preview)
 - **Server**: Bun 内置 HTTP + WebSocket 服务
 - **Frontend**: 纯 HTML + Canvas（无框架）
@@ -17,9 +18,9 @@ heart-signal 是一个用于小品表演的大屏幕心电图显示系统。支�
 ## Commands
 
 ```bash
-bun dev             # 启动开发服务器（带 HMR）
-bun start           # 生产环境启动
-bun run typecheck   # TypeScript 类型检查
+pnpm dev             # 启动开发服务器（带 HMR）
+pnpm start           # 生产环境启动
+pnpm typecheck       # TypeScript 类型检查
 ```
 
 开发服务器运行在 http://localhost:2026，WebSocket 端点为 ws://localhost:2026/ws
@@ -100,7 +101,7 @@ src/
 
 Push 到 main 分支后，Zeabur 会自动：
 1. 检测 `zbpack.json` 配置
-2. 运行 `bun install`
+2. 运行 `pnpm install`
 3. 启动应用（自动设置 `PORT` 环境变量）
 4. 分配公网域名
 
