@@ -9,9 +9,18 @@ export class LyricsManager {
   private lyricsContainer: HTMLElement | null = null;
   private sentences: LyricSentence[] = [];
   private currentSentenceIndex = -1;
+  private currentCharIndex = -1;
+  private onCharStartCallback: (() => void) | null = null;
 
   constructor() {
     this.lyricsContainer = document.getElementById('lyrics-container') as HTMLElement | null;
+  }
+
+  /**
+   * 设置每个字开始唱时的回调
+   */
+  onCharStart(callback: () => void) {
+    this.onCharStartCallback = callback;
   }
 
   /**
@@ -55,6 +64,7 @@ export class LyricsManager {
     // 如果句子切换了，重新渲染当前句子
     if (activeSentenceIndex !== this.currentSentenceIndex) {
       this.currentSentenceIndex = activeSentenceIndex;
+      this.currentCharIndex = -1; // 重置字符索引
       this.renderCurrentSentence();
     }
 
@@ -62,6 +72,24 @@ export class LyricsManager {
     if (activeSentenceIndex >= 0) {
       const sentence = this.sentences[activeSentenceIndex];
       const charElements = this.lyricsContainer.querySelectorAll('.char');
+
+      // 找到当前正在唱的字符
+      var activeCharIndex = -1;
+      for (let i = 0; i < sentence.chars.length; i++) {
+        const lyricChar = sentence.chars[i];
+        if (elapsed >= lyricChar.startTime && elapsed < lyricChar.startTime + lyricChar.duration) {
+          activeCharIndex = i;
+          break;
+        }
+      }
+
+      // 如果字符切换了，触发回调
+      if (activeCharIndex !== -1 && activeCharIndex !== this.currentCharIndex) {
+        this.currentCharIndex = activeCharIndex;
+        if (this.onCharStartCallback) {
+          this.onCharStartCallback();
+        }
+      }
 
       for (let i = 0; i < charElements.length; i++) {
         const lyricChar = sentence.chars[i];

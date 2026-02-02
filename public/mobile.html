@@ -159,6 +159,67 @@
       pointer-events: none;
     }
 
+    /* 歌词容器（音乐模式） */
+    .lyrics-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 60;
+    }
+
+    .lyrics-container.show {
+      opacity: 1;
+    }
+
+    .lyrics-line {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: clamp(28px, 8vw, 48px);
+      font-weight: bold;
+      text-align: center;
+      white-space: nowrap;
+      letter-spacing: 0.1em;
+    }
+
+    /* 卡拉OK效果 - 每个字的容器 */
+    .lyrics-line .char {
+      display: inline-block;
+      position: relative;
+    }
+
+    /* 底层 - 默认白色 */
+    .lyrics-line .char .char-bg {
+      color: #ffffff;
+      text-shadow:
+        2px 2px 4px rgba(0, 0, 0, 0.8),
+        -1px -1px 0 rgba(0, 0, 0, 0.3),
+        1px -1px 0 rgba(0, 0, 0, 0.3),
+        -1px 1px 0 rgba(0, 0, 0, 0.3),
+        1px 1px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    /* 上层 - 蓝色+外描边（卡拉OK高亮） */
+    .lyrics-line .char .char-fg {
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: #00bfff;
+      text-shadow:
+        -1px -1px 0 #ffffff,
+        1px -1px 0 #ffffff,
+        -1px 1px 0 #ffffff,
+        1px 1px 0 #ffffff,
+        -1px 0 0 #ffffff,
+        1px 0 0 #ffffff,
+        0 -1px 0 #ffffff,
+        0 1px 0 #ffffff,
+        2px 2px 6px rgba(0, 0, 0, 0.8);
+      clip-path: inset(0 100% 0 0);
+    }
+
     /* 下半部分：弹幕输入 */
     .input-section {
       flex: 0 0 45%;
@@ -702,6 +763,7 @@
     <div class="ecg-canvas-wrapper">
       <canvas id="mobile-ecg-canvas"></canvas>
       <div class="mobile-danmaku-container" id="mobile-danmaku-container"></div>
+      <div class="lyrics-container" id="lyrics-container"></div>
     </div>
   </div>
 

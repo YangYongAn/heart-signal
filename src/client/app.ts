@@ -332,6 +332,15 @@ class App {
       statusEl.className = `connection-status ${connected ? 'connected' : 'disconnected'}`;
       statusEl.textContent = connected ? 'Connected' : 'Disconnected';
     }
+
+    // PC 端连接成功后，广播模式重置为 NORMAL（通知所有移动端同步）
+    if (connected) {
+      this.ws.send({
+        type: 'modeChange',
+        data: { mode: ECGMode.NORMAL },
+        timestamp: Date.now(),
+      });
+    }
   }
 
   private updateBPM() {

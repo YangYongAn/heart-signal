@@ -4,6 +4,7 @@ import { DanmakuInputManager } from './classes/DanmakuInputManager';
 import { SimpleDanmakuManager } from './classes/SimpleDanmakuManager';
 import { WSClient } from './classes/WSClient';
 import { ECGWaveGenerator } from './classes/ECGWaveGenerator';
+import { LyricsManager } from './classes/LyricsManager';
 import { ECGMode } from './types';
 import { MODE_CONFIGS, MODE_EMOJI_URLS } from './constants';
 import { escapeHtml } from './utils';
@@ -20,6 +21,7 @@ class MobileApp {
   private danmakuManager: SimpleDanmakuManager;
   private ws: WSClient;
   private waveGenerator: ECGWaveGenerator;
+  private lyricsManager: LyricsManager;
   private ecgInterval: number | null = null;
   private currentBPM = 72;
   private currentMode: ECGMode = ECGMode.NORMAL;
@@ -58,6 +60,13 @@ class MobileApp {
     // 初始化波形生成器
     this.waveGenerator = new ECGWaveGenerator();
     console.log('[MobileApp] 波形生成器初始化完成');
+
+    // 初始化歌词管理器
+    this.lyricsManager = new LyricsManager();
+    this.lyricsManager.onCharStart(() => {
+      this.triggerLyricVibration();
+    });
+    console.log('[MobileApp] 歌词管理器初始化完成');
 
     // WebSocket URL
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -108,6 +117,10 @@ class MobileApp {
       // 启动 ECG 渲染
       console.log('[MobileApp.init] 启动 ECG 渲染...');
       this.ecg.startRendering();
+
+      // 加载歌词
+      console.log('[MobileApp.init] 加载歌词...');
+      this.lyricsManager.loadLyrics();
 
       // 连接 WebSocket
       console.log('[MobileApp.init] 连接 WebSocket...');
@@ -378,6 +391,13 @@ class MobileApp {
     if (mode === ECGMode.EXCITED && prevMode !== ECGMode.EXCITED) {
       this.triggerVibration();
     }
+
+    // 音乐模式：启动/停止歌词显示
+    if (mode === ECGMode.MUSIC) {
+      this.lyricsManager.start();
+    } else if (prevMode === ECGMode.MUSIC) {
+      this.lyricsManager.stop();
+    }
   }
 
   /**
@@ -440,6 +460,23 @@ class MobileApp {
       console.log('[MobileApp] 触发振动效果：长-短-长');
     } catch (err) {
       console.warn('[MobileApp] 振动效果调用失败:', err);
+    }
+  }
+
+  /**
+   * 触发歌词振动效果
+   * 每个字开始唱时触发短震
+   */
+  private triggerLyricVibration() {
+    const api = window.api;
+    if (!api || !api.vibrateShort) {
+      return;
+    }
+
+    try {
+      api.vibrateShort();
+    } catch (err) {
+      console.warn('[MobileApp] 歌词振动调用失败:', err);
     }
   }
 
@@ -523,6 +560,11 @@ class MobileApp {
           const bpmEl = document.getElementById('mobile-bpm')!;
           bpmEl.textContent = this.currentBPM.toString();
         }
+      }
+
+      // 音乐模式下更新歌词
+      if (this.currentMode === ECGMode.MUSIC) {
+        this.lyricsManager.updateLyrics();
       }
     }, 30);
   }
