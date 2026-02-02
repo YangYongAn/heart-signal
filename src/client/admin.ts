@@ -104,7 +104,7 @@ class AdminApp {
 
       case 'danmakuDelete':
         // 弹幕被删除
-        if (message.data?.id) {
+        if (message.data && message.data.id) {
           this.danmakuList.delete(message.data.id);
           this.renderDanmakuList();
         }

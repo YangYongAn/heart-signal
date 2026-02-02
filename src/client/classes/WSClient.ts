@@ -53,7 +53,7 @@ export class WSClient {
   }
 
   send(message: WSMessage) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     }
   }

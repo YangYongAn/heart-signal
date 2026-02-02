@@ -262,7 +262,7 @@ class App {
         const low = Math.floor(srcIndex);
         const high = Math.min(low + 1, srcLen - 1);
         const t = srcIndex - low;
-        raw.push((waveform[low] ?? 0) * (1 - t) + (waveform[high] ?? 0) * t);
+        raw.push((waveform[low] != null ? waveform[low] : 0) * (1 - t) + (waveform[high] != null ? waveform[high] : 0) * t);
       }
 
       const bassBoost = 1 + band.bass * 1.5;
@@ -305,20 +305,20 @@ class App {
         break;
 
       case 'danmakuDelete':
-        if (message.data?.id) {
+        if (message.data && message.data.id) {
           this.danmakuManager.removeDanmaku(message.data.id);
         }
         break;
 
       case 'modeChange':
-        if (message.data?.mode) {
+        if (message.data && message.data.mode) {
           this.switchMode(message.data.mode as ECGMode);
         }
         break;
 
       case 'connect':
       case 'disconnect':
-        if (message.data?.totalClients !== undefined) {
+        if (message.data && message.data.totalClients !== undefined) {
           this.onlineCount = message.data.totalClients;
           this.updateOnlineCount();
         }

@@ -110,3 +110,36 @@ Push 到 main 分支后，Zeabur 会自动：
 - 静态资源自动从 `public/` 目录发现，支持自动 MIME 类型识别
 - 歌词生成脚本在 `scripts/generate_lyrics.py`（使用 OpenAI Whisper）
 - 项目使用 TypeScript 7 native preview，类型检查用 `tsgo` 编译器
+
+## JavaScript 兼容性约定
+
+**重要**：为了支持旧设备（如 Android 5.0+、iOS 9+），**源代码必须只使用 ES2015 及更早的 JavaScript 特性**。
+
+### 禁止使用的特性（特别是移动端代码）
+
+| 特性 | 引入版本 | 替代方案 |
+|------|--------|--------|
+| 可选链 `?.` | ES2020 | `obj && obj.prop` |
+| 空值合并 `??` | ES2020 | `val !== undefined ? val : default` |
+| 可选链调用 `?.()` | ES2020 | 先检查后调用 |
+| 动态导入 `import()` | ES2020 | 不支持，仅用固定导入 |
+| BigInt | ES2020 | 使用 Number |
+| Promise.allSettled() | ES2020 | Promise.all 或手动处理 |
+
+### 允许使用的现代特性
+
+✅ **允许**（这些已被广泛支持）：
+- 箭头函数 `() => {}`（ES2015）
+- 模板字符串 `` `text ${var}` ``（ES2015）
+- 解构赋值 `const { a, b } = obj`（ES2015）
+- 类 `class Foo {}`（ES2015）
+- 默认参数 `function f(a = 1) {}`（ES2015）
+- Promise（ES2015）
+- for...of 循环（ES2015）
+- Map / Set（ES2015）
+
+### 特别提醒
+
+- **移动端代码** (`src/client/mobile.ts` 及其依赖)：严格遵守 ES2015 限制
+- **大屏代码** (`src/client/app.ts`)：也应遵守 ES2015 限制以确保兼容性
+- **后端代码**：可使用任何 Node.js 支持的特性

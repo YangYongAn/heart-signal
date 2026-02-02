@@ -22,6 +22,7 @@ async function handleBuild(pathname: string): Promise<Response | null> {
   const result = await Bun.build({
     entrypoints: [entrypoint],
     target: CLIENT_BUILD_TARGET,
+    minify: true,
   });
 
   if (!result.success) {

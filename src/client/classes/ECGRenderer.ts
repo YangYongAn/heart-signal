@@ -64,7 +64,7 @@ export class ECGRenderer {
     if (this.dataPoints.length > 1) {
       ctx.beginPath();
 
-      const opacity = config.opacity ?? 1;
+      const opacity = config.opacity !== undefined ? config.opacity : 1;
       if (opacity < 1) {
         const rgb = parseInt(config.color.slice(1), 16);
         const r = (rgb >> 16) & 255;

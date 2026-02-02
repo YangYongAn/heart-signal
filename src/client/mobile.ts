@@ -289,7 +289,7 @@ class MobileApp {
         break;
 
       case 'modeChange':
-        if (message.data?.mode) {
+        if (message.data && message.data.mode) {
           this.updateMode(message.data.mode);
         }
         break;
@@ -297,7 +297,7 @@ class MobileApp {
       case 'connect':
       case 'disconnect':
         // 连接状态变化
-        if (message.data?.totalClients !== undefined) {
+        if (message.data && message.data.totalClients !== undefined) {
           // 可选：显示在线人数
         }
         break;
@@ -365,8 +365,8 @@ class MobileApp {
    * 激动模式下执行：长震-短震-长震
    */
   private async triggerVibration() {
-    const api = (window as any).api;
-    if (!api?.vibrateLong || !api?.vibrateShort) {
+    const api = window.api;
+    if (!api.vibrateLong || !api.vibrateShort) {
       console.warn('[MobileApp] 振动 API 不可用');
       return;
     }

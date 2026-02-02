@@ -42,7 +42,7 @@ export class UserInfoManager {
     try {
       // 调用全局 API（由外部框架提供）
       console.log('[UserInfoManager] 检查全局 API...');
-      const apiFunction = (window as any).api?.gainUserInfo;
+      const apiFunction = window.api.gainUserInfo;
       console.log('[UserInfoManager] api.gainUserInfo 存在:', !!apiFunction);
 
       let userData: any;
@@ -177,21 +177,21 @@ export class UserInfoManager {
    * 获取用户昵称
    */
   getName(): string {
-    return this.user?.name || '匿名用户';
+    return this.user && this.user.name || '匿名用户';
   }
 
   /**
    * 获取用户头像
    */
   getAvatar(): string {
-    return this.user?.avatar || '';
+    return this.user && this.user.avatar || '';
   }
 
   /**
    * 获取用户 ID
    */
   getUserId(): string {
-    return this.user?.userId || '';
+    return this.user && this.user.userId || '';
   }
 
   /**
