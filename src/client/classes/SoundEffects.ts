@@ -33,6 +33,18 @@ export class SoundEffects {
     osc.stop(ctx.currentTime + duration);
   }
 
+  /**
+   * 激动模式：播放 4 次快速的滴声（滴滴滴滴）
+   */
+  playExcitedBeeps() {
+    const interval = 0.15;
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => {
+        this.playBeep(1000, 0.15, 0.5);
+      }, i * interval * 1000);
+    }
+  }
+
   startAlarm() {
     const ctx = this.ensureContext();
     const alarmOsc = ctx.createOscillator();
@@ -65,7 +77,8 @@ export class SoundEffects {
   }
 
   /**
-   * 死亡模式：持续长鸣音（flatline），音量从 0 渐入
+   * 死亡模式：持续长鸣音（flatline）
+   * BI----- 声先响亮 2 秒，然后逐渐衰减到无声
    */
   startFlatline() {
     const ctx = this.ensureContext();
@@ -73,14 +86,18 @@ export class SoundEffects {
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.value = 500;
+    osc.frequency.value = 880;
 
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 3);
+    // 前 2 秒保持响亮
+    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+    gain.gain.setValueAtTime(0.35, ctx.currentTime + 2);
+    // 之后 6 秒逐渐衰减
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 8);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
+    osc.stop(ctx.currentTime + 8);
 
     this.flatlineOsc = osc;
     this.flatlineGain = gain;

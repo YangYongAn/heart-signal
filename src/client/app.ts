@@ -96,9 +96,9 @@ class App {
 
       if (beat && this.hasUserInteracted) {
         if (this.currentMode === ECGMode.NORMAL) {
-          this.soundEffects.playBeep(880, 0.15, 0.3);
+          this.soundEffects.playBeep(1000, 0.25, 0.3);
         } else if (this.currentMode === ECGMode.EXCITED) {
-          this.soundEffects.playBeep(1000, 0.08, 0.5);
+          this.soundEffects.playExcitedBeeps();
         }
       }
 
@@ -213,11 +213,13 @@ class App {
         // 进入正常模式时重置时钟并立即播放一次声音
         this.waveGenerator.resetPhaseToQRS();
         if (this.hasUserInteracted) {
-          this.soundEffects.playBeep(880, 0.15, 0.3);
+          this.soundEffects.playBeep(1000, 0.25, 0.3);
         }
       } else if (mode === ECGMode.EXCITED) {
+        // 激动模式：立即重置时钟并播放滴滴滴滴
+        this.waveGenerator.resetPhaseToQRS();
         if (this.hasUserInteracted) {
-          this.soundEffects.startAlarm();
+          this.soundEffects.playExcitedBeeps();
         }
       } else if (mode === ECGMode.DEATH) {
         if (this.hasUserInteracted) {
