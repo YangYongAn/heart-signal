@@ -235,7 +235,7 @@ class App {
   private async startMusicMode() {
     this.soundEffects.stopAlarm();
     this.soundEffects.stopFlatline();
-    const audioUrl = '/music.wav';
+    const audioUrl = 'https://img.yangyongan.com/heart-signal/music.wav';
 
     this.audioAnalyzer = new AudioAnalyzer();
     // 只有在用户交互后才播放音乐
