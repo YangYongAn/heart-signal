@@ -11,6 +11,7 @@ export class DanmakuInputManager {
   private maxLength = 50; // 最大字符数
   private submitCallback: ((content: string) => void) | null = null;
   private countdownInterval: number | null = null;
+  private submitButtonText = '发送'; // 按钮原始文本
 
   constructor(
     inputSelector: string,
@@ -138,16 +139,26 @@ export class DanmakuInputManager {
     const updateCountdown = () => {
       const remaining = this.getTimeUntilNextSend();
 
-      if (this.cooldownTimer) {
-        if (remaining > 0) {
+      if (remaining > 0) {
+        // 在按钮上显示倒计时
+        this.submitButton.textContent = `${(remaining / 1000).toFixed(1)}s`;
+
+        // 如果有单独的冷却计时器元素，也更新它
+        if (this.cooldownTimer) {
           this.cooldownTimer.textContent = `${(remaining / 1000).toFixed(1)}s`;
           this.cooldownTimer.style.display = 'block';
-        } else {
+        }
+      } else {
+        // 恢复按钮文本
+        this.submitButton.textContent = this.submitButtonText;
+
+        if (this.cooldownTimer) {
           this.cooldownTimer.style.display = 'none';
-          if (this.countdownInterval !== null) {
-            clearInterval(this.countdownInterval as unknown as number);
-            this.countdownInterval = null;
-          }
+        }
+
+        if (this.countdownInterval !== null) {
+          clearInterval(this.countdownInterval as unknown as number);
+          this.countdownInterval = null;
         }
       }
 

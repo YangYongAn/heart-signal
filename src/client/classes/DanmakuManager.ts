@@ -163,6 +163,19 @@ export class DanmakuManager {
     };
     content.textContent = data.content;
 
+    // 如果是快捷语，调整样式
+    if (data.isQuickPhrase) {
+      element.style.fontSize = '50px';
+      element.style.color = 'rgba(255, 255, 255, 0.6)';
+      element.style.background = 'none';
+      element.style.backdropFilter = 'none';
+    } else {
+      element.style.fontSize = '60px';
+      element.style.color = 'white';
+      element.style.background = 'rgba(255, 255, 255, 0.08)';
+      element.style.backdropFilter = 'blur(4px)';
+    }
+
     // 随机垂直位置（避免重叠）
     const containerHeight = this.container.offsetHeight;
     const danmakuHeight = 84; // 弹幕高度约 60px + padding

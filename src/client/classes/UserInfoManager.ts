@@ -8,6 +8,7 @@ export interface UserInfo {
   name: string;
   avatar: string;
   loginName: string;
+  deptName?: string;
 }
 
 /**
@@ -71,6 +72,7 @@ export class UserInfoManager {
         name: userData.name || userData.loginName || '用户',
         avatar: getAvatarUrl(userData.avatar || '', userData.name || userData.loginName || '用户'),
         loginName: userData.loginName || '',
+        deptName: userData.deptName || '',
       };
 
       console.log('[UserInfoManager] 登录成功:', this.user);
@@ -141,6 +143,7 @@ export class UserInfoManager {
         name: '杨永安',
         avatar: '',
         muid: 'user-001',
+        deptName: '米兰学院',
       },
       {
         userId: 'user-002',
@@ -148,6 +151,7 @@ export class UserInfoManager {
         name: '张三',
         avatar: '',
         muid: 'user-002',
+        deptName: '技术部',
       },
       {
         userId: 'user-003',
@@ -155,6 +159,7 @@ export class UserInfoManager {
         name: '李四',
         avatar: '',
         muid: 'user-003',
+        deptName: '产品部',
       },
     ];
 

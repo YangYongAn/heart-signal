@@ -87,10 +87,10 @@ class MobileApp {
       console.log('[MobileApp.init] 启动 ECG 数据生成循环...');
       this.startECGLoop();
 
-      // 启用输入框
+      // 启用输入框和快捷语按钮
       console.log('[MobileApp.init] 启用输入框...');
       this.inputManager.enable();
-      this.inputManager.focus();
+      this.enableQuickPhrases();
 
       // 更新初始模式显示
       console.log('[MobileApp.init] 更新初始模式显示...');
@@ -123,6 +123,27 @@ class MobileApp {
       </div>
     `;
     statusEl.style.background = 'rgba(46, 204, 113, 0.1)';
+
+    // 更新快捷语中的部门名称
+    this.updateDeptQuickPhrase(user.deptName);
+  }
+
+  /**
+   * 更新部门快捷语
+   */
+  private updateDeptQuickPhrase(deptName?: string) {
+    if (!deptName) return;
+
+    const quickPhrases = document.querySelectorAll('.quick-phrase');
+    quickPhrases.forEach((btn) => {
+      const element = btn as HTMLButtonElement;
+      if (element.dataset.text === '我也是米兰学院的') {
+        const displayName = deptName.replace(/部$/, '分院');
+        const newText = `我也是米兰学院-${displayName}的`;
+        element.dataset.text = newText;
+        element.textContent = newText;
+      }
+    });
   }
 
   /**
@@ -174,17 +195,53 @@ class MobileApp {
     this.inputManager.setSubmitHandler((content) => {
       this.sendDanmaku(content);
     });
+
+    // 快捷语按钮点击
+    const randomSkills = ['前端', '后端', 'JAVA', 'AI', '摸鱼', '做菜', 'CSS', 'Rust', '画画', '吉他'];
+    const luckinDrinks = ['丝绒拿铁', '瑞纳冰', '小黄油拿铁', '生椰拿铁', '厚乳拿铁', '橙C美式', '抹茶拿铁'];
+    const luckinSugar = ['全糖', '半糖', '三分糖', '无糖'];
+    const luckinTemp = ['冰的', '热的', '去冰', '温的'];
+    const bossTitles = ['老当家', '大当家', '二当家', '三当家'];
+    const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+    const quickPhrases = document.querySelectorAll('.quick-phrase');
+    quickPhrases.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const element = btn as HTMLButtonElement;
+        if (element.disabled) return;
+
+        let text = element.dataset.text;
+        if (text === 'random-skill') {
+          text = `三当家，我要和你学${pick(randomSkills)}`;
+        } else if (text === 'random-luckin') {
+          text = `二当家，我要喝${pick(luckinDrinks)}，${pick(luckinSugar)}${pick(luckinTemp)}`;
+        } else if (text === 'random-boss') {
+          text = `${pick(bossTitles)}真帅！`;
+        }
+        if (text) {
+          this.sendDanmaku(text, true); // 标记为快捷语
+        }
+      });
+    });
   }
 
   /**
    * 发送弹幕
    */
-  private sendDanmaku(content: string) {
+  private sendDanmaku(content: string, isQuickPhrase = false) {
     const user = this.userManager.getUser();
     if (!user) {
       alert('未登录');
       return;
     }
+
+    // 禁用快捷语按钮
+    this.disableQuickPhrases();
+
+    // 3秒后恢复快捷语按钮
+    setTimeout(() => {
+      this.enableQuickPhrases();
+    }, 3000);
 
     const message: WSMessage = {
       type: 'danmaku',
@@ -194,11 +251,32 @@ class MobileApp {
         avatar: user.avatar,
         content: content,
         timestamp: Date.now(),
+        isQuickPhrase,
       },
       timestamp: Date.now(),
     };
 
     this.ws.send(message);
+  }
+
+  /**
+   * 启用快捷语按钮
+   */
+  private enableQuickPhrases() {
+    const quickPhrases = document.querySelectorAll('.quick-phrase');
+    quickPhrases.forEach((btn) => {
+      (btn as HTMLButtonElement).disabled = false;
+    });
+  }
+
+  /**
+   * 禁用快捷语按钮
+   */
+  private disableQuickPhrases() {
+    const quickPhrases = document.querySelectorAll('.quick-phrase');
+    quickPhrases.forEach((btn) => {
+      (btn as HTMLButtonElement).disabled = true;
+    });
   }
 
   /**

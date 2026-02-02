@@ -16,6 +16,7 @@ export interface DanmakuData {
   avatar: string;
   content: string;
   timestamp: number;
+  isQuickPhrase?: boolean; // 是否来自快捷语
 }
 
 /**

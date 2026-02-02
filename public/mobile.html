@@ -147,12 +147,14 @@
     /* 下半部分：弹幕输入 */
     .input-section {
       flex: 0 0 45%;
-      padding: 8px 12px 8px 12px;
+      padding: 8px 12px;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
       border-top: 1px solid #222;
       background: rgba(0, 0, 0, 0.5);
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      justify-content: flex-end;
+      gap: 8px;
       overflow-y: auto;
       overflow-x: hidden;
     }
@@ -160,17 +162,17 @@
     .login-status {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
+      gap: 10px;
+      padding: 10px 12px;
       background: rgba(255, 255, 255, 0.08);
-      border-radius: 6px;
-      font-size: 12px;
+      border-radius: 8px;
+      font-size: 15px;
       flex-shrink: 0;
     }
 
     .user-avatar {
-      width: 24px;
-      height: 24px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       flex-shrink: 0;
       object-fit: cover;
@@ -181,12 +183,13 @@
       flex: 1;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       overflow: hidden;
     }
 
     .user-name {
       font-weight: 600;
+      font-size: 16px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -201,6 +204,45 @@
       border-radius: 6px;
       display: none;
       flex-shrink: 0;
+    }
+
+    /* 快捷语区域 */
+    .quick-phrases {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 4px 0;
+      flex-shrink: 0;
+    }
+
+    .quick-phrase {
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      color: #fff;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      -webkit-appearance: none;
+      -webkit-user-select: none;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .quick-phrase:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(46, 204, 113, 0.5);
+    }
+
+    .quick-phrase:active {
+      background: rgba(46, 204, 113, 0.3);
+      transform: scale(0.95);
+    }
+
+    .quick-phrase:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
     }
 
     .input-container {
@@ -373,8 +415,9 @@
 
       .input-section {
         flex: 0 0 50%;
-        padding: 6px 8px 6px 8px;
-        gap: 4px;
+        padding: 6px 8px;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom));
+        gap: 6px;
       }
 
       .ecg-header h1 {
@@ -386,13 +429,18 @@
       }
 
       .login-status {
-        padding: 4px 8px;
-        font-size: 11px;
+        padding: 8px 10px;
+        font-size: 14px;
+        gap: 8px;
       }
 
       .user-avatar {
-        width: 20px;
-        height: 20px;
+        width: 32px;
+        height: 32px;
+      }
+
+      .user-name {
+        font-size: 15px;
       }
 
       #danmaku-input {
@@ -414,6 +462,11 @@
 
       .char-count {
         font-size: 9px;
+      }
+
+      .quick-phrase {
+        font-size: 12px;
+        padding: 6px 10px;
       }
     }
   </style>
@@ -446,6 +499,16 @@
     </div>
 
     <div class="login-error" id="login-error"></div>
+
+    <!-- 快捷语 -->
+    <div class="quick-phrases" id="quick-phrases">
+      <button class="quick-phrase" data-text="老当家，快醒醒啊" disabled>老当家，快醒醒啊</button>
+      <button class="quick-phrase" data-text="random-boss" disabled>🎲当家真帅！</button>
+      <button class="quick-phrase" data-text="random-luckin" disabled>二当家，我要喝瑞幸🎲</button>
+      <button class="quick-phrase" data-text="random-skill" disabled>三当家，我要和你学🎲</button>
+      <button class="quick-phrase" data-text="我也是米兰学院的" disabled>我也是米兰学院的</button>
+      <button class="quick-phrase" data-text="我有一个好消息" disabled>我有一个好消息</button>
+    </div>
 
     <div class="input-container">
       <textarea
