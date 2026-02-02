@@ -33,6 +33,15 @@ export class ECGWaveGenerator {
   }
 
   /**
+   * 重置正常模式的时钟，使得下一个 beat 立即发生
+   */
+  resetPhaseToQRS() {
+    this.phase = 0.29;
+    this.beeped = false;
+    this.lastBeatTime = 0;
+  }
+
+  /**
    * 生成下一个数据点，返回 { value, beat } beat=true 表示刚好在 QRS 峰
    */
   tick(): { value: number; beat: boolean } {

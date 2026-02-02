@@ -170,10 +170,13 @@ class App {
     } else {
       this.waveGenerator.setMode(mode);
 
-      if (mode === ECGMode.EXCITED) {
+      if (mode === ECGMode.NORMAL) {
+        // 进入正常模式时重置时钟并立即播放一次声音
+        this.waveGenerator.resetPhaseToQRS();
+        this.soundEffects.playBeep(880, 0.15, 0.3);
+      } else if (mode === ECGMode.EXCITED) {
         this.soundEffects.startAlarm();
-      }
-      if (mode === ECGMode.DEATH) {
+      } else if (mode === ECGMode.DEATH) {
         this.soundEffects.startFlatline();
         this.currentBPM = 0;
         this.updateBPM();
