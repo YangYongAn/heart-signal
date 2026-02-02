@@ -44,8 +44,8 @@ const MODE_CONFIGS: Record<ECGMode, ModeConfig> = {
     background: '#000'
   },
   [ECGMode.MUSIC]: {
-    color: '#5f27cd',
-    shadowColor: '#341f97',
+    color: '#ffffff',
+    shadowColor: '#ffffff',
     lineWidth: 3,
     name: '🎵',
     background: '#0a0a0a'
@@ -618,6 +618,7 @@ class App {
   private waveGenerator = new ECGWaveGenerator();
   private interactionCount = 0;
   private currentBPM = 72;
+  private lastDisplayedBPM = -1; // 上次显示的 BPM，用于避免不必要的 DOM 更新
   private onlineCount = 0;
   private currentMode: ECGMode = ECGMode.NORMAL;
   private ecgInterval?: ReturnType<typeof setInterval>;
@@ -643,6 +644,7 @@ class App {
     this.ws.connect();
     this.setupKeyboardEvents();
     this.updateModeDisplay();
+    this.updateBPM(); // 初始化 BPM 显示
 
     // 启动统一的心电图波形循环（始终运行）
     this.startECGLoop();
@@ -667,18 +669,29 @@ class App {
           this.soundEffects.playBeep(1000, 0.08, 0.5);
         }
         // 死亡模式振幅太小时不出声
+      }
 
-        // 更新 BPM（加自然波动）
+      // 更新 BPM
+      if (this.currentMode === ECGMode.DEATH) {
+        // 死亡模式：BPM 始终为 0
+        this.currentBPM = 0;
+      } else if (this.currentMode === ECGMode.EXCITED) {
+        // 激动模式：频繁变动 BPM（每个 tick 都更新）
         const baseBPM = this.waveGenerator.getLastBPM();
         if (baseBPM > 0) {
-          const jitter = this.currentMode === ECGMode.EXCITED ? 8 : 3;
+          const jitter = 15; // 增大波动范围
           this.currentBPM = Math.round(baseBPM + (Math.random() - 0.5) * jitter * 2);
-          if (this.currentMode === ECGMode.DEATH && this.currentBPM < 5) {
-            this.currentBPM = 0;
-          }
+          this.currentBPM = Math.max(60, Math.min(180, this.currentBPM)); // 限制在合理范围
         }
-        this.updateBPM();
+      } else if (beat) {
+        // 正常模式：beat 时更新
+        const baseBPM = this.waveGenerator.getLastBPM();
+        if (baseBPM > 0) {
+          const jitter = 3;
+          this.currentBPM = Math.round(baseBPM + (Math.random() - 0.5) * jitter * 2);
+        }
       }
+      this.updateBPM();
     }, 30);
   }
 
@@ -732,6 +745,16 @@ class App {
     // 停止死亡长鸣
     if (prevMode === ECGMode.DEATH) {
       this.soundEffects.stopFlatline();
+      // 从死亡模式切出时，立即更新 BPM
+      const baseBPM = this.waveGenerator.getLastBPM();
+      if (baseBPM > 0) {
+        if (mode === ECGMode.EXCITED) {
+          this.currentBPM = baseBPM + (Math.random() - 0.5) * 30;
+        } else {
+          this.currentBPM = baseBPM;
+        }
+      }
+      this.updateBPM();
     }
 
     if (mode === ECGMode.MUSIC) {
@@ -745,6 +768,9 @@ class App {
       }
       if (mode === ECGMode.DEATH) {
         this.soundEffects.startFlatline();
+        // 死亡模式立即将 BPM 设为 0
+        this.currentBPM = 0;
+        this.updateBPM();
       }
     }
   }
@@ -836,9 +862,15 @@ class App {
   }
 
   private updateBPM() {
+    // 只在 BPM 实际改变时才更新 DOM，避免不必要的操作
+    if (this.currentBPM === this.lastDisplayedBPM) {
+      return;
+    }
+
     const bpmEl = document.getElementById('bpm-value');
     if (bpmEl) {
       bpmEl.textContent = this.currentBPM.toString();
+      this.lastDisplayedBPM = this.currentBPM;
     }
   }
 
