@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Heart Signal</title>
   <style>
+    @font-face {
+      font-family: 'LED';
+      src: url('/led.ttf') format('truetype');
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -144,10 +149,12 @@
     }
 
     .bpm-value {
+      font-family: 'LED', monospace;
       font-size: 5rem;
-      font-weight: bold;
+      font-weight: normal;
       color: #ff4757;
       line-height: 1;
+      letter-spacing: 2px;
     }
 
     .bpm-label {

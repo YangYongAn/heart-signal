@@ -71,6 +71,22 @@ const server = Bun.serve({
       });
     }
 
+    // 提供字体文件
+    if (url.pathname === '/led.ttf') {
+      const file = Bun.file('./assets/led.ttf');
+      const exists = await file.exists();
+
+      if (!exists) {
+        return new Response('Font file not found', { status: 404 });
+      }
+
+      return new Response(file, {
+        headers: {
+          'Content-Type': 'font/ttf',
+        },
+      });
+    }
+
     return new Response('Not Found', { status: 404 });
   },
 

@@ -74,15 +74,15 @@ const WAVE_PRESETS: Record<string, Omit<WaveParams, 'amplitude'>> = {
   normal: {
     phaseStep: 0.067,
     targetAmplitude: 1.0,
-    noise: 0.02,
-    qrsGain: 1.0,
+    noise: 0.03,
+    qrsGain: 0.8,
     harmonics: false
   },
   excited: {
     phaseStep: 0.12,
     targetAmplitude: 1.0,
-    noise: 0.15,
-    qrsGain: 1.6,
+    noise: 0.25,
+    qrsGain: 1.1,
     harmonics: true
   },
   death: {
@@ -564,12 +564,16 @@ class ECGWaveGenerator {
       if (cyclePos >= 0.55 && cyclePos < 0.9) {
         value += 0.15;
       }
-      // 叠加高频颤动
-      value += Math.sin(this.phase * 7) * 0.06;
-      value += Math.sin(this.phase * 13) * 0.04;
-      // 偶尔出现室性早搏 (PVC)
-      if (Math.random() < 0.003 && cyclePos > 1.0) {
-        value += (Math.random() - 0.5) * 1.5;
+      // 叠加多层高频颤动，增加起伏丰富度
+      value += Math.sin(this.phase * 5) * 0.08;
+      value += Math.sin(this.phase * 9) * 0.06;
+      value += Math.sin(this.phase * 13) * 0.05;
+      value += Math.sin(this.phase * 17) * 0.04;
+      // 增加低频波动
+      value += Math.sin(this.phase * 2.3) * 0.1;
+      // 偶尔出现室性早搏 (PVC)，增加概率
+      if (Math.random() < 0.008 && cyclePos > 1.0) {
+        value += (Math.random() - 0.5) * 1.2;
       }
     }
 
