@@ -23,8 +23,8 @@ interface ModeConfig {
 
 const MODE_CONFIGS: Record<ECGMode, ModeConfig> = {
   [ECGMode.NORMAL]: {
-    color: '#ff4757',
-    shadowColor: '#ff4757',
+    color: '#2ed573',
+    shadowColor: '#2ed573',
     lineWidth: 3,
     name: '💓',
     background: '#111'
@@ -638,6 +638,7 @@ class App {
     this.ecg.startRendering();
     this.ws.connect();
     this.setupKeyboardEvents();
+    this.updateModeDisplay();
 
     // 启动统一的心电图波形循环（始终运行）
     this.startECGLoop();
@@ -831,7 +832,7 @@ class App {
   }
 
   private updateBPM() {
-    const bpmEl = document.getElementById('bpm');
+    const bpmEl = document.getElementById('bpm-value');
     if (bpmEl) {
       bpmEl.textContent = this.currentBPM.toString();
     }
@@ -852,11 +853,26 @@ class App {
   }
 
   private updateModeDisplay() {
+    const config = MODE_CONFIGS[this.currentMode];
+
+    // 更新模式显示
     const modeEl = document.getElementById('current-mode');
     if (modeEl) {
-      const config = MODE_CONFIGS[this.currentMode];
       modeEl.textContent = config.name;
       modeEl.style.color = config.color;
+    }
+
+    // 更新标题颜色和阴影
+    const titleEl = document.getElementById('title');
+    if (titleEl) {
+      titleEl.style.color = config.color;
+      titleEl.style.textShadow = `0 0 20px ${config.shadowColor}`;
+    }
+
+    // 更新 BPM 颜色
+    const bpmEl = document.getElementById('bpm-value');
+    if (bpmEl) {
+      bpmEl.style.color = config.color;
     }
   }
 }
