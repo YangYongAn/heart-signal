@@ -78,7 +78,7 @@ export class SoundEffects {
 
   /**
    * 死亡模式：持续长鸣音（flatline）
-   * BI----- 声先响亮 2 秒，然后逐渐衰减到无声
+   * BI----- 声先响亮 1 秒，然后逐渐衰减到无声
    */
   startFlatline() {
     const ctx = this.ensureContext();
@@ -88,10 +88,10 @@ export class SoundEffects {
     osc.type = 'sine';
     osc.frequency.value = 880;
 
-    // 前 2 秒保持响亮
+    // 前 1 秒保持响亮
     gain.gain.setValueAtTime(0.35, ctx.currentTime);
-    gain.gain.setValueAtTime(0.35, ctx.currentTime + 2);
-    // 之后 6 秒逐渐衰减
+    gain.gain.setValueAtTime(0.35, ctx.currentTime + 1);
+    // 之后 7 秒逐渐衰减
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 8);
 
     osc.connect(gain);
