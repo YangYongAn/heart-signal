@@ -11,6 +11,8 @@ async function handleBuild(pathname: string): Promise<Response | null> {
     entrypoint = CLIENT_BUILD_ENTRY;
   } else if (pathname === '/mobile.js') {
     entrypoint = './src/client/mobile.ts';
+  } else if (pathname === '/admin.js') {
+    entrypoint = './src/client/admin.ts';
   }
 
   if (!entrypoint) {

@@ -1,4 +1,4 @@
-import type { DanmakuData } from '../../shared/types';
+import type { DanmakuData, StoredDanmaku } from '../../shared/types';
 
 /**
  * 弹幕管理器
@@ -7,8 +7,9 @@ import type { DanmakuData } from '../../shared/types';
  */
 export class DanmakuManager {
   private container: HTMLElement;
-  private queue: DanmakuData[] = [];
-  private active: Map<string, HTMLElement> = new Map();
+  private queue: (DanmakuData | StoredDanmaku)[] = [];
+  private active: Map<string, HTMLElement> = new Map(); // id -> element
+  private danmakuIdMap: Map<string, string> = new Map(); // serverId -> domId
   private pool: HTMLElement[] = [];
   private poolIndex = 0;
   private maxConcurrent = 15; // 最大同屏弹幕数
@@ -150,7 +151,7 @@ export class DanmakuManager {
   /**
    * 显示单条弹幕
    */
-  private displayDanmaku(data: DanmakuData) {
+  private displayDanmaku(data: DanmakuData | StoredDanmaku) {
     const element = this.getFromPool();
 
     // 设置数据（只有头像和内容）
@@ -188,15 +189,20 @@ export class DanmakuManager {
     element.style.transform = 'translateX(0) translateZ(0)';
     element.style.opacity = '1';
 
-    // 生成唯一 ID
-    const id = `danmaku-${data.userId}-${data.timestamp}-${Math.random()}`;
-    this.active.set(id, element);
+    // 生成唯一 DOM ID（用于动画跟踪）
+    const domId = `danmaku-${data.userId}-${data.timestamp}-${Math.random()}`;
+    this.active.set(domId, element);
+
+    // 如果有服务器 ID，建立映射
+    if ('id' in data) {
+      this.danmakuIdMap.set(data.id, domId);
+    }
 
     // 获取弹幕元素的实际宽度
     const elementWidth = element.offsetWidth;
 
     // 启动滚动动画
-    this.animateDanmaku(element, id, elementWidth);
+    this.animateDanmaku(element, domId, elementWidth);
   }
 
   /**
@@ -223,6 +229,12 @@ export class DanmakuManager {
         // 动画完成，返回池中
         element.style.display = 'none';
         this.active.delete(id);
+        // 清理 ID 映射
+        this.danmakuIdMap.forEach((domId, serverId) => {
+          if (domId === id) {
+            this.danmakuIdMap.delete(serverId);
+          }
+        });
         return;
       }
 
@@ -266,6 +278,21 @@ export class DanmakuManager {
   }
 
   /**
+   * 删除指定 ID 的弹幕（通常来自服务器删除请求）
+   */
+  removeDanmaku(serverId: string) {
+    const domId = this.danmakuIdMap.get(serverId);
+    if (domId) {
+      const element = this.active.get(domId);
+      if (element) {
+        element.style.display = 'none';
+        this.active.delete(domId);
+      }
+      this.danmakuIdMap.delete(serverId);
+    }
+  }
+
+  /**
    * 清空所有弹幕
    */
   clear() {
@@ -274,6 +301,7 @@ export class DanmakuManager {
       element.style.display = 'none';
     });
     this.active.clear();
+    this.danmakuIdMap.clear();
   }
 
   /**

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>💓 ECG 控制面板</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      padding: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-top));
+      gap: 16px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    /* 模式切换区域 */
+    .mode-section {
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+      padding: 0 4px;
+    }
+
+    .mode-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .mode-btn {
+      padding: 24px 16px;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      font-family: inherit;
+      letter-spacing: 0.05em;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mode-btn:active {
+      transform: scale(0.95);
+    }
+
+    .mode-btn.normal {
+      background: #2ed573;
+      color: #000;
+    }
+
+    .mode-btn.excited {
+      background: #ff6b6b;
+      color: #fff;
+    }
+
+    .mode-btn.death {
+      background: #888;
+      color: #fff;
+    }
+
+    .mode-btn.music {
+      background: #4ecdc4;
+      color: #000;
+    }
+
+    .mode-btn.active {
+      border-color: #fff;
+      box-shadow: 0 0 12px currentColor, inset 0 0 8px rgba(255, 255, 255, 0.2);
+      transform: scale(1.02);
+    }
+
+    /* 弹幕管理区域 */
+    .danmaku-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .danmaku-list {
+      flex: 1;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 0;
+      margin-top: 12px;
+    }
+
+    .danmaku-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .danmaku-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+    }
+
+    .danmaku-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .danmaku-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .danmaku-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: background 0.2s ease;
+    }
+
+    .danmaku-item:last-child {
+      border-bottom: none;
+    }
+
+    .danmaku-item:active {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .danmaku-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .danmaku-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .danmaku-name {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .danmaku-content {
+      font-size: 12px;
+      color: #ccc;
+      line-height: 1.3;
+      word-break: break-all;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .danmaku-delete {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      background: rgba(255, 107, 107, 0.2);
+      color: #ff6b6b;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .danmaku-delete:active {
+      background: rgba(255, 107, 107, 0.4);
+      transform: scale(0.95);
+    }
+
+    /* 响应式设计 */
+    @media (max-height: 600px) {
+      body {
+        gap: 12px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      .mode-btn {
+        padding: 16px 12px;
+        font-size: 14px;
+      }
+    }
+
+    /* 状态提示 */
+    .status-bar {
+      font-size: 12px;
+      text-align: center;
+      color: #888;
+      height: 20px;
+      line-height: 20px;
+    }
+
+    .status-bar.connected {
+      color: #2ed573;
+    }
+
+    .status-bar.disconnected {
+      color: #ff6b6b;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>💓 ECG 控制面板</h1>
+
+  <!-- 弹幕管理区 -->
+  <div class="danmaku-section">
+    <div class="section-title">💬 弹幕 (<span id="danmaku-count">0</span>)</div>
+    <div class="danmaku-list" id="danmakuList">
+      <div class="danmaku-empty">暂无弹幕</div>
+    </div>
+  </div>
+
+  <!-- 模式切换区 -->
+  <div class="mode-section">
+    <div class="section-title">🎮 模式</div>
+    <div class="mode-buttons">
+      <button class="mode-btn normal" data-mode="normal">💓 正常</button>
+      <button class="mode-btn music" data-mode="music">🎵 音乐</button>
+      <button class="mode-btn excited" data-mode="excited">⚡ 激动</button>
+      <button class="mode-btn death" data-mode="death">💀 死亡</button>
+    </div>
+  </div>
+
+  <!-- 状态指示 -->
+  <div class="status-bar" id="statusBar"></div>
+
+  <script src="/admin.js"></script>
+</body>
+</html>

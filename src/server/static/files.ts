@@ -66,6 +66,11 @@ export async function serveStatic(pathname: string): Promise<Response | null> {
     pathname = '/mobile.html';
   }
 
+  // 管理后台页面路由
+  if (pathname === '/admin') {
+    pathname = '/admin.html';
+  }
+
   // 构建文件路径
   const filePath = `${PUBLIC_DIR}${pathname}`;
   const file = Bun.file(filePath);

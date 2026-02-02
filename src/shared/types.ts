@@ -2,7 +2,7 @@
  * WebSocket 消息格式（前后端共享）
  */
 export interface WSMessage {
-  type: 'heartbeat' | 'interaction' | 'connect' | 'disconnect' | 'danmaku' | 'modeChange';
+  type: 'heartbeat' | 'interaction' | 'connect' | 'disconnect' | 'danmaku' | 'modeChange' | 'danmakuList' | 'danmakuListSync' | 'danmakuDelete' | 'danmakuDeleted';
   data?: any;
   timestamp: number;
 }
@@ -25,4 +25,12 @@ export interface DanmakuData {
 export interface DanmakuMessage extends WSMessage {
   type: 'danmaku';
   data: DanmakuData;
+}
+
+/**
+ * 服务端存储的弹幕（带 ID）
+ */
+export interface StoredDanmaku extends DanmakuData {
+  id: string; // UUID
+  status?: 'queued' | 'displaying' | 'done';
 }

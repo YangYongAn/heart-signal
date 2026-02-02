@@ -304,6 +304,18 @@ class App {
         }
         break;
 
+      case 'danmakuDelete':
+        if (message.data?.id) {
+          this.danmakuManager.removeDanmaku(message.data.id);
+        }
+        break;
+
+      case 'modeChange':
+        if (message.data?.mode) {
+          this.switchMode(message.data.mode as ECGMode);
+        }
+        break;
+
       case 'connect':
       case 'disconnect':
         if (message.data?.totalClients !== undefined) {
