@@ -129,12 +129,20 @@
       width: 100%;
       gap: 30px;
       flex-shrink: 0;
+      min-height: 180px;
+      position: relative;
     }
 
     .header-left {
       display: flex;
       align-items: center;
       gap: 20px;
+    }
+
+    .title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
     .title {
@@ -146,6 +154,10 @@
     }
 
     .mode-display {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -159,8 +171,8 @@
     }
 
     #current-mode img {
-      width: 68px;
-      height: 68px;
+      width: 150px;
+      height: 150px;
       image-rendering: crisp-edges;
     }
 
@@ -173,7 +185,7 @@
 
     .bpm-value {
       font-family: 'LED', monospace;
-      font-size: clamp(4rem, 8vw, 8rem);
+      font-size: clamp(5rem, 10vw, 10rem);
       font-weight: normal;
       color: #ff4757;
       line-height: 1;
@@ -187,7 +199,7 @@
 
     .ecg-container {
       width: 100%;
-      flex: 1;
+      flex: 0.75;
       border: 2px solid #333;
       border-radius: 10px;
       background: #111;
@@ -261,16 +273,66 @@
         4px 4px 8px rgba(0, 0, 0, 0.8);
       clip-path: inset(0 100% 0 0);
     }
+
+    /* 二维码区域 */
+    .qr-section {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .qr-text {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: bold;
+      color: #999;
+      white-space: nowrap;
+    }
+
+    .youspace-logo {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 4px;
+      border-radius: 50%;
+    }
+
+    .qr-code-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .qr-code {
+      width: 150px;
+      height: 150px;
+      border: 3px solid #fff;
+      border-radius: 8px;
+      background: #fff;
+      display: block;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <div class="header-left">
-        <h1 class="title" id="title">Heart Signal</h1>
-        <div class="mode-display">
-          <span id="current-mode"></span>
+        <div class="qr-section">
+          <div class="qr-code-wrapper">
+            <img id="qr-code" class="qr-code" alt="扫码互动">
+            <svg class="youspace-logo" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M336.996771 425.149048l44.017472 44.031694a62.257345 62.257345 0 1 0 88.020722-88.063389l-44.010361-44.017472c-48.618329-48.618329-48.618329-127.472893-0.014222-176.105443 48.62544-48.62544 127.444448-48.62544 176.055666 0 0 0 27.477143 27.498476 44.017472 44.031694a62.236012 62.236012 0 0 0 88.020722 0c24.319831-24.305609 24.305609-63.736446 0-88.049167l-44.017472-44.017472c-97.222436-97.272213-254.860452-97.272213-352.089999 0-52.600524 52.593413-76.68569 122.893369-72.376386 191.74978-68.820855-4.316414-139.092367 19.775863-191.700003 72.390608-97.222436 97.257991-97.222436 254.945785 0 352.210888l44.017473 44.017472a62.22179 62.22179 0 0 0 88.020722 0c24.31272-24.305609 24.31272-63.743557 0-88.034944l-44.010361-44.038806c-48.604107-48.639662-48.611218-127.472893 0-176.105443 48.611218-48.632551 127.444448-48.632551 176.048555 0" fill="#FF3A3A"/><path d="M950.866286 335.777224c-97.080215-97.11577-254.455122-97.101548-351.542448 0-97.065993 97.11577-97.065993 254.540455 0.014222 351.649113 48.525885 48.547218 48.525885 127.280894-0.014222 175.828113-48.532996 48.547218-127.238228 48.547218-175.757002 0-48.540107-48.540107-48.540107-127.273783 0-175.828113l43.946362-43.946361c24.24872-24.284276 24.24872-63.644002 0-87.921167a62.157791 62.157791 0 0 0-87.892723 0l-43.946362 43.960583c-97.080215 97.094437-97.080215 254.540455 0 351.649114 97.080215 97.101548 254.469344 97.101548 351.542448-0.007111 97.065993-97.101548 97.080215-254.547566 0-351.642003-48.525885-48.554329-48.540107-127.280894 0-175.81389 48.532996-48.568552 127.238228-48.561441 175.778335 0 48.525885 48.532996 48.525885 127.259561-0.021333 175.81389l-43.939251 43.960584c-24.255832 24.262943-24.255832 63.62978 0.014222 87.899834a62.122235 62.122235 0 0 0 87.878501 0l43.939251-43.946362c97.080215-97.11577 97.080215-254.540455 0-351.656224" fill="#FF3A3A"/></svg>
+          </div>
         </div>
+        <div class="title-group">
+          <h1 class="title" id="title">Heart Signal</h1>
+          <span class="qr-text">👈🏻 友空间扫码互动</span>
+        </div>
+      </div>
+      <div class="mode-display">
+        <span id="current-mode"></span>
       </div>
       <div class="bpm-display">
         <div class="bpm-value" id="bpm-value">72</div>
@@ -325,6 +387,15 @@
     </div>
   </div>
 
+  <script>
+    // 生成二维码
+    (function() {
+      const qrImg = document.getElementById('qr-code');
+      const mobileUrl = `${window.location.protocol}//${window.location.host}/mobile`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&ecc=H&data=${encodeURIComponent(mobileUrl)}`;
+      qrImg.src = qrApiUrl;
+    })();
+  </script>
   <script src="/app.js"></script>
 </body>
 </html>
