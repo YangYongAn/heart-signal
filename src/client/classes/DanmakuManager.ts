@@ -105,9 +105,6 @@ export class DanmakuManager {
     const content = document.createElement('span');
     content.style.cssText = `
       flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 1200px;
       line-height: 1.1;
     `;
     wrapper.appendChild(content);

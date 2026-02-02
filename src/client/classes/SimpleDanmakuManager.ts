@@ -92,8 +92,6 @@ export class SimpleDanmakuManager {
     const content = document.createElement('span');
     content.style.cssText =
       'flex: 1;' +
-      'overflow: hidden;' +
-      'text-overflow: ellipsis;' +
       'line-height: 1.2;';
     wrapper.appendChild(content);
 

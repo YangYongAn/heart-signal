@@ -251,6 +251,14 @@ class MobileApp {
         }
         if (text) {
           this.sendDanmaku(text, true); // 标记为快捷语
+
+          // 米兰学院快捷语：更新用户面板昵称（去掉"我也是"前缀）
+          if (text.indexOf('米兰学院') !== -1) {
+            var nameEl = document.querySelector('.user-name');
+            if (nameEl) {
+              nameEl.textContent = text.replace('我也是', '');
+            }
+          }
         }
       });
     });
