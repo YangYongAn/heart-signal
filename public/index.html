@@ -328,7 +328,8 @@
         </div>
         <div class="title-group">
           <h1 class="title" id="title">Heart Signal</h1>
-          <span class="qr-text">👈🏻 友空间扫码互动</span>
+          <span class="qr-text" id="qr-text">👈🏻 友空间扫码互动</span>
+          <span class="countdown-text" id="countdown-text" style="display: none; color: rgba(255, 255, 255, 0.7); font-size: 2rem; font-family: 'LED', monospace; letter-spacing: 0.05em;"></span>
         </div>
       </div>
       <div class="mode-display">
@@ -388,12 +389,70 @@
   </div>
 
   <script>
-    // 生成二维码
+    // 生成二维码并控制显示时间
     (function() {
       const qrImg = document.getElementById('qr-code');
       const mobileUrl = `${window.location.protocol}//${window.location.host}/mobile`;
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&ecc=H&data=${encodeURIComponent(mobileUrl)}`;
       qrImg.src = qrApiUrl;
+
+      // 时间控制：2026年02月03日 18:00 之前隐藏二维码和引导文案
+      const showTime = new Date('2026-02-03T18:00:00').getTime();
+
+      const qrSection = document.querySelector('.qr-section');
+      const qrText = document.getElementById('qr-text');
+      const countdownText = document.getElementById('countdown-text');
+      let intervalId = null;
+
+      function pad(num) {
+        return num < 10 ? '0' + num : String(num);
+      }
+
+      function updateDisplay() {
+        const now = new Date().getTime();
+        const diff = showTime - now;
+
+        if (diff <= 0) {
+          // 时间到了，显示二维码和引导文案
+          if (qrSection) qrSection.style.display = 'flex';
+          if (qrText) qrText.style.display = 'inline';
+          if (countdownText) countdownText.style.display = 'none';
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+        } else {
+          // 还没到时间，隐藏二维码，显示倒计时
+          if (qrSection) qrSection.style.display = 'none';
+          if (qrText) qrText.style.display = 'none';
+          if (countdownText) {
+            countdownText.style.display = 'inline';
+
+            // 计算剩余时间
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            // 格式化显示
+            let countdownStr = '距离开始还有 ';
+            if (days > 0) {
+              countdownStr += days + '天 ';
+            }
+            countdownStr += pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
+
+            countdownText.textContent = countdownStr;
+          }
+        }
+      }
+
+      // 初始显示
+      updateDisplay();
+
+      // 如果还没到时间，开始倒计时
+      if (new Date().getTime() < showTime) {
+        intervalId = setInterval(updateDisplay, 1000);
+      }
     })();
   </script>
   <script src="/app.js"></script>
