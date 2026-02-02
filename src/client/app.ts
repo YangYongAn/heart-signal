@@ -20,46 +20,67 @@ interface LyricChar {
 }
 
 /**
+ * 歌词句子 - 每行是一个句子
+ */
+interface LyricSentence {
+  chars: LyricChar[];
+  startTime: number; // 句子开始时间
+  endTime: number;   // 句子结束时间
+}
+
+/**
  * 解析文本格式的歌词
  * 格式: 字(startTime+duration)字(startTime+duration)...
  * 换行表示新句子
  */
-function parseLyricsText(text: string): LyricChar[] {
-  const lyrics: LyricChar[] = [];
+function parseLyricsText(text: string): LyricSentence[] {
+  const sentences: LyricSentence[] = [];
   const lines = text.trim().split('\n');
 
   for (const line of lines) {
+    const chars: LyricChar[] = [];
     // 匹配 字(time+duration) 格式
     const regex = /(.)\((\d+\.?\d*)\+(\d+\.?\d*)\)/g;
     let match;
 
     while ((match = regex.exec(line)) !== null) {
-      lyrics.push({
+      chars.push({
         char: match[1],
         startTime: parseFloat(match[2]),
         duration: parseFloat(match[3])
       });
     }
+
+    if (chars.length > 0) {
+      const startTime = chars[0].startTime;
+      const lastChar = chars[chars.length - 1];
+      const endTime = lastChar.startTime + lastChar.duration;
+
+      sentences.push({
+        chars,
+        startTime,
+        endTime
+      });
+    }
   }
 
-  return lyrics;
+  return sentences;
 }
 
 /**
  * 从服务器加载歌词文本
  */
-async function loadLyricsFromServer(): Promise<LyricChar[]> {
+async function loadLyricsFromServer(): Promise<string> {
   try {
     const response = await fetch('/music_lyric.txt');
     if (!response.ok) {
       console.warn('歌词文件未找到，请运行: python3 scripts/generate_lyrics.py assets/music.wav');
-      return [];
+      return '';
     }
-    const text = await response.text();
-    return parseLyricsText(text);
+    return await response.text();
   } catch (error) {
     console.error('加载歌词失败:', error);
-    return [];
+    return '';
   }
 }
 
@@ -344,24 +365,55 @@ class SoundEffects {
 class LyricsManager {
   private startTime = 0;
   private lyricsContainer: HTMLElement | null = null;
-  private lyricsLine: HTMLElement | null = null;
-  private lyrics: LyricChar[] = [];
+  private sentences: LyricSentence[] = [];
+  private currentSentenceIndex = -1;
 
   constructor() {
     this.lyricsContainer = document.getElementById('lyrics-container') as HTMLElement | null;
-    this.lyricsLine = document.getElementById('lyrics-line') as HTMLElement | null;
   }
 
   /**
    * 加载歌词数据
    */
   async loadLyrics() {
-    this.lyrics = await loadLyricsFromServer();
+    const text = await loadLyricsFromServer();
+    // 将文本按换行符分句
+    const lines = text.trim().split('\n');
+    this.sentences = [];
+
+    for (const line of lines) {
+      const chars: LyricChar[] = [];
+      // 匹配 字(time+duration) 格式
+      const regex = /(.)\((\d+\.?\d*)\+(\d+\.?\d*)\)/g;
+      let match;
+
+      while ((match = regex.exec(line)) !== null) {
+        chars.push({
+          char: match[1],
+          startTime: parseFloat(match[2]),
+          duration: parseFloat(match[3])
+        });
+      }
+
+      if (chars.length > 0) {
+        const startTime = chars[0].startTime;
+        const lastChar = chars[chars.length - 1];
+        const endTime = lastChar.startTime + lastChar.duration;
+
+        this.sentences.push({
+          chars,
+          startTime,
+          endTime
+        });
+      }
+    }
+
     this.renderAllLyrics();
   }
 
   start() {
     this.startTime = Date.now() / 1000;
+    this.currentSentenceIndex = -1;
     if (this.lyricsContainer) {
       this.lyricsContainer.classList.add('show');
     }
@@ -374,46 +426,78 @@ class LyricsManager {
   }
 
   updateLyrics() {
-    if (!this.lyricsLine || this.lyrics.length === 0) return;
+    if (!this.lyricsContainer || this.sentences.length === 0) return;
 
     const elapsed = Date.now() / 1000 - this.startTime;
 
-    // 更新每个字的填色状态
-    const chars = this.lyricsLine.querySelectorAll('.char');
-    for (let i = 0; i < chars.length; i++) {
-      const lyricChar = this.lyrics[i];
-      if (!lyricChar) continue;
+    // 找到当前应该显示的句子
+    let activeSentenceIndex = -1;
+    for (let i = 0; i < this.sentences.length; i++) {
+      const sentence = this.sentences[i];
+      if (elapsed >= sentence.startTime && elapsed < sentence.endTime) {
+        activeSentenceIndex = i;
+        break;
+      }
+    }
 
-      // 检查当前字是否应该填色
-      if (elapsed >= lyricChar.startTime && elapsed < lyricChar.startTime + lyricChar.duration) {
-        // 计算字的填色进度
-        const charProgress = (elapsed - lyricChar.startTime) / lyricChar.duration;
-        chars[i].classList.add('active');
-        // 可以在这里设置更细粒度的透明度变化
-        (chars[i] as HTMLElement).style.opacity = (0.3 + charProgress * 0.7).toString();
-      } else if (elapsed >= lyricChar.startTime + lyricChar.duration) {
-        // 已播放完的字
-        chars[i].classList.add('active');
-        (chars[i] as HTMLElement).style.opacity = '1';
-      } else {
-        // 未到达的字
-        chars[i].classList.remove('active');
-        (chars[i] as HTMLElement).style.opacity = '0.3';
+    // 如果句子切换了，重新渲染当前句子
+    if (activeSentenceIndex !== this.currentSentenceIndex) {
+      this.currentSentenceIndex = activeSentenceIndex;
+      this.renderCurrentSentence();
+    }
+
+    // 更新当前句子中每个字的填色状态
+    if (activeSentenceIndex >= 0) {
+      const sentence = this.sentences[activeSentenceIndex];
+      const charElements = this.lyricsContainer.querySelectorAll('.char');
+
+      for (let i = 0; i < charElements.length; i++) {
+        const lyricChar = sentence.chars[i];
+        if (!lyricChar) continue;
+
+        // 检查当前字是否应该填色
+        if (elapsed >= lyricChar.startTime && elapsed < lyricChar.startTime + lyricChar.duration) {
+          // 计算字的填色进度
+          const charProgress = (elapsed - lyricChar.startTime) / lyricChar.duration;
+          (charElements[i] as HTMLElement).style.opacity = (0.3 + charProgress * 0.7).toString();
+        } else if (elapsed >= lyricChar.startTime + lyricChar.duration) {
+          // 已播放完的字
+          (charElements[i] as HTMLElement).style.opacity = '1';
+        } else {
+          // 未到达的字
+          (charElements[i] as HTMLElement).style.opacity = '0.3';
+        }
       }
     }
   }
 
   private renderAllLyrics() {
-    if (!this.lyricsLine) return;
+    if (!this.lyricsContainer) return;
 
-    this.lyricsLine.innerHTML = '';
-    for (const lyricChar of this.lyrics) {
+    this.lyricsContainer.innerHTML = '';
+  }
+
+  private renderCurrentSentence() {
+    if (!this.lyricsContainer || this.currentSentenceIndex < 0) {
+      this.lyricsContainer!.innerHTML = '';
+      return;
+    }
+
+    const sentence = this.sentences[this.currentSentenceIndex];
+    this.lyricsContainer.innerHTML = '';
+
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'lyrics-line';
+
+    for (const lyricChar of sentence.chars) {
       const span = document.createElement('span');
       span.className = 'char';
       span.textContent = lyricChar.char;
       span.style.opacity = '0.3';
-      this.lyricsLine.appendChild(span);
+      lineDiv.appendChild(span);
     }
+
+    this.lyricsContainer.appendChild(lineDiv);
   }
 }
 
@@ -806,23 +890,23 @@ class App {
    */
   private startECGLoop() {
     this.ecgInterval = setInterval(() => {
-      // 音乐模式不走波形生成器
+      // 音乐模式有自己的波形生成逻辑
       if (this.currentMode === ECGMode.MUSIC) return;
 
       const { value, beat } = this.waveGenerator.tick();
       this.ecg.addDataPoint(value);
 
       if (beat) {
-        // QRS 峰到达，播放对应音效
+        // QRS 峰到达，播放对应音效（音乐模式不播放心跳音）
         if (this.currentMode === ECGMode.NORMAL) {
           this.soundEffects.playBeep(880, 0.15, 0.3);
         } else if (this.currentMode === ECGMode.EXCITED) {
           this.soundEffects.playBeep(1000, 0.08, 0.5);
         }
-        // 死亡模式振幅太小时不出声
+        // 死亡模式和音乐模式不播放心跳音效
       }
 
-      // 更新 BPM
+      // 更新 BPM（音乐模式有自己的 BPM 更新逻辑，不走这里）
       if (this.currentMode === ECGMode.DEATH) {
         // 死亡模式：BPM 始终为 0
         this.currentBPM = 0;
@@ -933,22 +1017,65 @@ class App {
   private async startMusicMode() {
     this.soundEffects.stopAlarm();
     this.soundEffects.stopFlatline();
+    const audioUrl = '/music.wav';
 
-    // 初始化音频分析器用于播放
     this.audioAnalyzer = new AudioAnalyzer();
-    try {
-      await this.audioAnalyzer.init('/music.wav');
-    } catch (error) {
-      console.error('Failed to load music:', error);
-    }
+    await this.audioAnalyzer.init(audioUrl);
+
+    // 帧间平滑缓冲
+    let smoothed: number[] = new Array(200).fill(0);
 
     // 启动歌词显示
     this.lyricsManager.start();
 
-    // 定时更新歌词显示
     this.musicInterval = setInterval(() => {
+      if (!this.audioAnalyzer) return;
+
+      const waveform = this.audioAnalyzer.getWaveformData();
+      const band = this.audioAnalyzer.getBandEnergy();
+      const srcLen = waveform.length;
+      const targetLen = 200;
+
+      // 将时域波形插值到 200 个点
+      const raw: number[] = [];
+      for (let i = 0; i < targetLen; i++) {
+        const srcIndex = (i / targetLen) * srcLen;
+        const low = Math.floor(srcIndex);
+        const high = Math.min(low + 1, srcLen - 1);
+        const t = srcIndex - low;
+        raw.push((waveform[low] ?? 0) * (1 - t) + (waveform[high] ?? 0) * t);
+      }
+
+      // 低频（鼓点）驱动振幅放大
+      const bassBoost = 1 + band.bass * 1.5;
+
+      const points: number[] = [];
+      for (let i = 0; i < targetLen; i++) {
+        let v = raw[i] * bassBoost;
+        // 帧间平滑（50% 当前帧 + 50% 上一帧）
+        v = v * 0.5 + smoothed[i] * 0.5;
+        // 钳制在 -1 ~ 1 范围内，确保不超出画布
+        v = Math.max(-1, Math.min(1, v));
+        points.push(v);
+      }
+
+      // 三点均值平滑，消除锯齿和噪点
+      const clean: number[] = [points[0]];
+      for (let i = 1; i < points.length - 1; i++) {
+        clean.push((points[i - 1] + points[i] + points[i + 1]) / 3);
+      }
+      clean.push(points[points.length - 1]);
+
+      smoothed = clean;
+      this.ecg.setDataPoints(clean);
+
+      const volume = this.audioAnalyzer.getAverageVolume();
+      this.currentBPM = Math.round(60 + volume * 100);
+      this.updateBPM();
+
+      // 更新歌词显示
       this.lyricsManager.updateLyrics();
-    }, 50);
+    }, 30);
   }
 
   private handleMessage(message: WSMessage) {
