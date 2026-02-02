@@ -300,7 +300,7 @@ class MobileApp {
 
     const timestamp = Date.now();
 
-    // 本地上屏预览
+    // 本地上屏预览（使用完整头像）
     this.danmakuManager.addDanmaku({
       userId: user.userId,
       name: user.name,
@@ -310,12 +310,19 @@ class MobileApp {
       isQuickPhrase: isQuickPhrase,
     });
 
+    // 判断头像是否是生成的 data URL，如果是则不传递（减少数据包大小）
+    // 接收端会根据 name 自动生成占位头像
+    var avatarToSend = user.avatar;
+    if (avatarToSend && avatarToSend.indexOf('data:') === 0) {
+      avatarToSend = '';
+    }
+
     const message: WSMessage = {
       type: 'danmaku',
       data: {
         userId: user.userId,
         name: user.name,
-        avatar: user.avatar,
+        avatar: avatarToSend,
         content: content,
         timestamp: timestamp,
         isQuickPhrase: isQuickPhrase,
@@ -538,6 +545,19 @@ class MobileApp {
     const statusEl = document.getElementById('login-status')!;
     if (connected) {
       statusEl.style.opacity = '1';
+
+      // 连接成功后发送注册消息
+      const user = this.userManager.getUser();
+      if (user) {
+        this.ws.send({
+          type: 'register',
+          data: {
+            userId: user.userId,
+            name: user.name,
+          },
+          timestamp: Date.now(),
+        });
+      }
     } else {
       statusEl.style.opacity = '0.5';
     }

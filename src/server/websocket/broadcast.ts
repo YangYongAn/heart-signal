@@ -7,6 +7,11 @@ import type { WSMessage } from '../../shared/types';
 export const clients = new Set<ServerWebSocket<unknown>>();
 
 /**
+ * 存储客户端对应的用户名
+ */
+const clientNames = new Map<ServerWebSocket<unknown>, string>();
+
+/**
  * 广播消息给所有连接的客户端
  */
 export function broadcast(message: WSMessage) {
@@ -28,6 +33,7 @@ export function addClient(ws: ServerWebSocket<unknown>) {
  */
 export function removeClient(ws: ServerWebSocket<unknown>) {
   clients.delete(ws);
+  clientNames.delete(ws);
 }
 
 /**
@@ -35,4 +41,18 @@ export function removeClient(ws: ServerWebSocket<unknown>) {
  */
 export function getClientCount(): number {
   return clients.size;
+}
+
+/**
+ * 设置客户端的用户名
+ */
+export function setClientName(ws: ServerWebSocket<unknown>, name: string) {
+  clientNames.set(ws, name);
+}
+
+/**
+ * 获取客户端的用户名
+ */
+export function getClientName(ws: ServerWebSocket<unknown>): string | undefined {
+  return clientNames.get(ws);
 }

@@ -8,6 +8,7 @@ import { SoundEffects } from './classes/SoundEffects';
 import { AudioAnalyzer } from './classes/AudioAnalyzer';
 import { LyricsManager } from './classes/LyricsManager';
 import { DanmakuManager } from './classes/DanmakuManager';
+import { getAvatarUrl } from './utils/avatar';
 
 /**
  * 应用主类
@@ -303,7 +304,12 @@ class App {
 
       case 'danmaku':
         if (message.data) {
-          this.danmakuManager.addDanmaku(message.data);
+          // 如果头像为空，自动生成占位头像
+          var danmakuData = message.data;
+          if (!danmakuData.avatar || danmakuData.avatar.trim() === '') {
+            danmakuData.avatar = getAvatarUrl('', danmakuData.name || '');
+          }
+          this.danmakuManager.addDanmaku(danmakuData);
         }
         break;
 

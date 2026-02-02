@@ -1,14 +1,24 @@
 import type { ServerWebSocket } from 'bun';
-import type { WSMessage } from '../../shared/types';
-import { addClient, removeClient, broadcast, getClientCount } from './broadcast';
+import type { WSMessage, RegisterData } from '../../shared/types';
+import { addClient, removeClient, broadcast, getClientCount, setClientName, getClientName } from './broadcast';
 import { danmakuStore } from '../danmaku/manager';
+
+/**
+ * 格式化时间为 HH:mm:ss
+ */
+function formatTime(date: Date): string {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  const s = String(date.getSeconds()).padStart(2, '0');
+  return h + ':' + m + ':' + s;
+}
 
 /**
  * WebSocket 连接打开事件处理
  */
 export function handleOpen(ws: ServerWebSocket<unknown>) {
   addClient(ws);
-  console.log('Client connected, total:', getClientCount());
+  console.log('[' + formatTime(new Date()) + '] Client connected, total:', getClientCount());
 
   // 通知所有客户端有新连接
   broadcast({
@@ -24,14 +34,24 @@ export function handleOpen(ws: ServerWebSocket<unknown>) {
 export function handleMessage(ws: ServerWebSocket<unknown>, message: string | Buffer) {
   try {
     const data: WSMessage = JSON.parse(typeof message === 'string' ? message : message.toString());
-    console.log('Received:', data);
 
     // 处理不同的消息类型
     switch (data.type) {
+      case 'register': {
+        // 用户注册（连接后发送用户信息）
+        const regData = data.data as RegisterData;
+        if (regData && regData.name) {
+          setClientName(ws, regData.name);
+          console.log('[' + formatTime(new Date()) + '] User registered:', regData.name, ', total:', getClientCount());
+        }
+        break;
+      }
+
       case 'danmaku': {
         // 存储弹幕到服务器
         const stored = danmakuStore.addDanmaku(data.data as any);
-        console.log('Stored danmaku:', stored.id);
+        const senderName = getClientName(ws) || data.data.name || 'unknown';
+        console.log('[' + formatTime(new Date()) + '] Danmaku from', senderName + ':', stored.content);
 
         // 广播弹幕给所有客户端（包含 ID）
         broadcast({
@@ -58,7 +78,7 @@ export function handleMessage(ws: ServerWebSocket<unknown>, message: string | Bu
         const danmakuId = (data.data as any)?.id;
         if (danmakuId) {
           danmakuStore.deleteDanmaku(danmakuId);
-          console.log('Deleted danmaku:', danmakuId);
+          console.log('[' + formatTime(new Date()) + '] Deleted danmaku:', danmakuId);
 
           // 广播删除消息给所有客户端
           broadcast({
@@ -83,8 +103,14 @@ export function handleMessage(ws: ServerWebSocket<unknown>, message: string | Bu
  * WebSocket 连接关闭事件处理
  */
 export function handleClose(ws: ServerWebSocket<unknown>) {
+  const name = getClientName(ws);
   removeClient(ws);
-  console.log('Client disconnected, total:', getClientCount());
+
+  if (name) {
+    console.log('[' + formatTime(new Date()) + '] User disconnected:', name, ', total:', getClientCount());
+  } else {
+    console.log('[' + formatTime(new Date()) + '] Client disconnected, total:', getClientCount());
+  }
 
   // 通知所有客户端有连接断开
   broadcast({

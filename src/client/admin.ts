@@ -1,5 +1,6 @@
 import { WSClient } from './classes/WSClient';
 import type { WSMessage, StoredDanmaku } from '../shared/types';
+import { getAvatarUrl } from './utils/avatar';
 
 /**
  * Admin 管理后台应用
@@ -96,6 +97,10 @@ class AdminApp {
         if (message.data && typeof message.data === 'object') {
           const danmaku = message.data as StoredDanmaku;
           if (danmaku.id) {
+            // 如果头像为空，自动生成占位头像
+            if (!danmaku.avatar || danmaku.avatar.trim() === '') {
+              danmaku.avatar = getAvatarUrl('', danmaku.name || '');
+            }
             this.danmakuList.set(danmaku.id, danmaku);
             this.renderDanmakuList();
           }
