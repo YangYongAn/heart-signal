@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
 使用 OpenAI Whisper 从音频文件生成歌词和逐字时间轴
-安装依赖：pip install openai-whisper
+安装依赖：
+  pip3 install openai-whisper
+  pip3 install opencc  （可选，用于简繁转换，约 1.4MB）
 """
 
 import whisper
@@ -9,12 +11,20 @@ import json
 import sys
 import os
 
-def generate_lyrics_from_audio(audio_file_path):
+# 尝试导入 OpenCC（简繁转换）- 约 1.4MB
+try:
+    from opencc import OpenCC
+    OPENCC_AVAILABLE = True
+except ImportError:
+    OPENCC_AVAILABLE = False
+
+def generate_lyrics_from_audio(audio_file_path, to_traditional=False):
     """
     从音频文件生成歌词和逐字时间轴
 
     Args:
         audio_file_path: 音频文件路径
+        to_traditional: 是否转换为繁体中文
     """
     print(f"加载 Whisper 模型...")
     # 使用 tiny 模型（最小，~72MB）
@@ -27,6 +37,15 @@ def generate_lyrics_from_audio(audio_file_path):
         language="zh",  # 中文
         word_timestamps=True  # 获取逐字时间轴
     )
+
+    # 转换为繁体（如果需要）
+    if to_traditional and OPENCC_AVAILABLE:
+        converter = OpenCC('s2t')  # 简体 to 繁体
+        for segment in result['segments']:
+            if 'words' in segment:
+                for word_data in segment['words']:
+                    word_data['word'] = converter.convert(word_data['word'])
+        print("✓ 已转换为繁体中文")
 
     # 提取逐字时间轴
     lyrics = []
@@ -117,15 +136,25 @@ def print_lyrics_preview(lyrics, max_lines=10):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("使用方法: python3 generate_lyrics.py <音频文件路径>")
+        print("使用方法: python3 generate_lyrics.py <音频文件路径> [--traditional]")
         print("\n示例:")
         print("  python3 generate_lyrics.py ../assets/music.wav")
-        print("  → 自动生成: ../assets/music_lyric.txt")
-        print("\n  python3 generate_lyrics.py song.mp3")
-        print("  → 自动生成: song_lyric.txt")
+        print("  → 自动生成: ../assets/music_lyric.txt (简体)")
+        print("\n  python3 generate_lyrics.py ../assets/music.wav --traditional")
+        print("  → 自动生成: ../assets/music_lyric.txt (繁体)")
+        print("\n  python3 generate_lyrics.py song.mp3 -t")
+        print("  → 自动生成: song_lyric.txt (繁体)")
         sys.exit(1)
 
     audio_file = sys.argv[1]
+    to_traditional = '--traditional' in sys.argv or '-t' in sys.argv
 
-    lyrics = generate_lyrics_from_audio(audio_file)
+    if to_traditional and not OPENCC_AVAILABLE:
+        print("\n⚠️  警告: 未安装 opencc，无法转换繁体")
+        print("   安装方法: pip3 install opencc")
+        print("   包大小: 约 1.4MB")
+        print("   将使用简体输出\n")
+        to_traditional = False
+
+    lyrics = generate_lyrics_from_audio(audio_file, to_traditional)
     print_lyrics_preview(lyrics)

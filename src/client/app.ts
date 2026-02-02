@@ -446,7 +446,7 @@ class LyricsManager {
       this.renderCurrentSentence();
     }
 
-    // 更新当前句子中每个字的填色状态
+    // 更新当前句子中每个字的卡拉OK效果
     if (activeSentenceIndex >= 0) {
       const sentence = this.sentences[activeSentenceIndex];
       const charElements = this.lyricsContainer.querySelectorAll('.char');
@@ -455,17 +455,25 @@ class LyricsManager {
         const lyricChar = sentence.chars[i];
         if (!lyricChar) continue;
 
-        // 检查当前字是否应该填色
+        const charEl = charElements[i] as HTMLElement;
+        const fgSpan = charEl.querySelector('.char-fg') as HTMLElement;
+        if (!fgSpan) continue;
+
+        // 计算卡拉OK进度（从左到右）
         if (elapsed >= lyricChar.startTime && elapsed < lyricChar.startTime + lyricChar.duration) {
-          // 计算字的填色进度
+          // 正在唱这个字 - 从左到右扫过
           const charProgress = (elapsed - lyricChar.startTime) / lyricChar.duration;
-          (charElements[i] as HTMLElement).style.opacity = (0.3 + charProgress * 0.7).toString();
+          const rightClip = Math.round((1 - charProgress) * 100);
+          fgSpan.style.clipPath = `inset(0 ${rightClip}% 0 0)`;
+          charEl.style.opacity = '1'; // 字完全可见
         } else if (elapsed >= lyricChar.startTime + lyricChar.duration) {
-          // 已播放完的字
-          (charElements[i] as HTMLElement).style.opacity = '1';
+          // 已播放完的字 - 完全显示高亮
+          fgSpan.style.clipPath = 'inset(0 0% 0 0)';
+          charEl.style.opacity = '1';
         } else {
-          // 未到达的字
-          (charElements[i] as HTMLElement).style.opacity = '0.3';
+          // 未到达的字 - 不显示高亮
+          fgSpan.style.clipPath = 'inset(0 100% 0 0)';
+          charEl.style.opacity = '0.5';
         }
       }
     }
@@ -490,11 +498,24 @@ class LyricsManager {
     lineDiv.className = 'lyrics-line';
 
     for (const lyricChar of sentence.chars) {
-      const span = document.createElement('span');
-      span.className = 'char';
-      span.textContent = lyricChar.char;
-      span.style.opacity = '0.3';
-      lineDiv.appendChild(span);
+      // 字的容器
+      const charSpan = document.createElement('span');
+      charSpan.className = 'char';
+      charSpan.style.opacity = '0.5'; // 默认较暗
+
+      // 底层 - 白色文字
+      const bgSpan = document.createElement('span');
+      bgSpan.className = 'char-bg';
+      bgSpan.textContent = lyricChar.char;
+
+      // 上层 - 蓝色+白色描边（卡拉OK高亮）
+      const fgSpan = document.createElement('span');
+      fgSpan.className = 'char-fg';
+      fgSpan.textContent = lyricChar.char;
+
+      charSpan.appendChild(bgSpan);
+      charSpan.appendChild(fgSpan);
+      lineDiv.appendChild(charSpan);
     }
 
     this.lyricsContainer.appendChild(lineDiv);

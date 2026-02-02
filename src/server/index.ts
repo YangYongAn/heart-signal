@@ -71,7 +71,7 @@ const server = Bun.serve({
       });
     }
 
-    // 提供字体文件
+    // 提供 LED 字体文件
     if (url.pathname === '/led.ttf') {
       const file = Bun.file('./assets/led.ttf');
       const exists = await file.exists();
@@ -83,6 +83,23 @@ const server = Bun.serve({
       return new Response(file, {
         headers: {
           'Content-Type': 'font/ttf',
+        },
+      });
+    }
+
+    // 提供 KTV 字体文件
+    if (url.pathname === '/GenSenRounded-M.ttc') {
+      const file = Bun.file('./assets/GenSenRounded-M.ttc');
+      const exists = await file.exists();
+
+      if (!exists) {
+        return new Response('KTV font file not found', { status: 404 });
+      }
+
+      return new Response(file, {
+        headers: {
+          'Content-Type': 'font/ttc',
+          'Cache-Control': 'public, max-age=31536000', // 缓存1年
         },
       });
     }

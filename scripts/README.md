@@ -6,18 +6,32 @@
 
 ### 1. 安装依赖
 
+**必需：**
 ```bash
 pip3 install openai-whisper
+```
+
+**可选（繁体支持）：**
+```bash
+pip3 install opencc  # 约 1.4MB，用于简繁转换
 ```
 
 首次运行时会自动下载 tiny 模型（约 72MB）。
 
 ### 2. 生成歌词
 
+**简体中文：**
 ```bash
 cd scripts
 python3 generate_lyrics.py ../assets/music.wav
 # 自动生成: ../assets/music_lyric.txt
+```
+
+**繁体中文：**
+```bash
+cd scripts
+python3 generate_lyrics.py ../assets/music.wav --traditional
+# 自动生成: ../assets/music_lyric.txt (繁体)
 ```
 
 ### 3. 启动应用

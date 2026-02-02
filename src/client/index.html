@@ -10,6 +10,12 @@
       src: url('/led.ttf') format('truetype');
     }
 
+    @font-face {
+      font-family: 'GenSenRounded';
+      src: url('/GenSenRounded-M.ttc') format('truetype');
+      font-weight: normal;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -193,6 +199,7 @@
     }
 
     .lyrics-line {
+      font-family: 'GenSenRounded', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
       font-size: 4rem;
       font-weight: bold;
       text-align: center;
@@ -200,9 +207,26 @@
       text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
     }
 
+    /* 卡拉OK效果 - 每个字的容器 */
     .lyrics-line .char {
       display: inline-block;
-      color: rgba(255, 255, 255, 1);
+      position: relative;
+    }
+
+    /* 底层 - 默认白色 */
+    .lyrics-line .char .char-bg {
+      color: #ffffff;
+    }
+
+    /* 上层 - 蓝色+白色描边（卡拉OK高亮） */
+    .lyrics-line .char .char-fg {
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: #00bfff;
+      -webkit-text-stroke: 2px #ffffff;
+      text-stroke: 2px #ffffff;
+      clip-path: inset(0 100% 0 0);
     }
   </style>
 </head>
