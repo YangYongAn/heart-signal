@@ -26,28 +26,28 @@ const MODE_CONFIGS: Record<ECGMode, ModeConfig> = {
     color: '#ff4757',
     shadowColor: '#ff4757',
     lineWidth: 3,
-    name: '正常模式',
+    name: '💓',
     background: '#111'
   },
   [ECGMode.EXCITED]: {
     color: '#ff6b6b',
     shadowColor: '#ff0000',
     lineWidth: 4,
-    name: '激动模式',
+    name: '⚡',
     background: '#1a0000'
   },
   [ECGMode.DEATH]: {
     color: '#999',
     shadowColor: '#222',
     lineWidth: 4,
-    name: '死亡模式',
+    name: '💀',
     background: '#000'
   },
   [ECGMode.MUSIC]: {
     color: '#5f27cd',
     shadowColor: '#341f97',
     lineWidth: 3,
-    name: '音乐模式',
+    name: '🎵',
     background: '#0a0a0a'
   }
 };

@@ -31,6 +31,12 @@
       gap: 20px;
     }
 
+    .status-group {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
     .online-count {
       padding: 8px 16px;
       border-radius: 20px;
@@ -40,7 +46,7 @@
 
     .shortcuts {
       display: flex;
-      gap: 15px;
+      gap: 20px;
       padding: 0;
       background: transparent;
       border: none;
@@ -49,9 +55,13 @@
     .shortcut {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       font-size: 0.8rem;
       color: #888;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .shortcut kbd {
@@ -168,7 +178,7 @@
       <div class="header-left">
         <h1 class="title">Heart Signal</h1>
         <div class="mode-display">
-          <span id="current-mode">正常模式</span>
+          <span id="current-mode">💓</span>
         </div>
       </div>
       <div class="bpm-display">
@@ -183,31 +193,32 @@
   </div>
 
   <div class="bottom-bar">
-    <div class="online-count" id="online-count">
-      Online: 0
-    </div>
-
     <div class="shortcuts">
       <div class="shortcut">
         <kbd>Enter</kbd>
-        <span>激动</span>
+        <span>⚡ 激动</span>
       </div>
       <div class="shortcut">
         <kbd>Backspace</kbd>
-        <span>死亡</span>
+        <span>💀 死亡</span>
       </div>
       <div class="shortcut">
         <kbd>Space</kbd>
-        <span>音乐</span>
+        <span>🎵 音乐</span>
       </div>
       <div class="shortcut">
         <kbd>Esc</kbd>
-        <span>正常</span>
+        <span>💓 正常</span>
       </div>
     </div>
 
-    <div class="connection-status disconnected" id="connection-status">
-      Disconnected
+    <div class="status-group">
+      <div class="online-count" id="online-count">
+        Online: 0
+      </div>
+      <div class="connection-status disconnected" id="connection-status">
+        Disconnected
+      </div>
     </div>
   </div>
 
