@@ -200,11 +200,11 @@
 
     .lyrics-line {
       font-family: 'GenSenRounded', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-      font-size: 4rem;
+      font-size: 6rem;
       font-weight: bold;
       text-align: center;
       white-space: nowrap;
-      text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+      letter-spacing: 0.15em;
     }
 
     /* 卡拉OK效果 - 每个字的容器 */
@@ -216,16 +216,32 @@
     /* 底层 - 默认白色 */
     .lyrics-line .char .char-bg {
       color: #ffffff;
+      text-shadow:
+        3px 3px 6px rgba(0, 0, 0, 0.8),
+        -1px -1px 0 rgba(0, 0, 0, 0.3),
+        1px -1px 0 rgba(0, 0, 0, 0.3),
+        -1px 1px 0 rgba(0, 0, 0, 0.3),
+        1px 1px 0 rgba(0, 0, 0, 0.3);
     }
 
-    /* 上层 - 蓝色+白色描边（卡拉OK高亮） */
+    /* 上层 - 蓝色+外描边（卡拉OK高亮） */
     .lyrics-line .char .char-fg {
       position: absolute;
       left: 0;
       top: 0;
       color: #00bfff;
-      -webkit-text-stroke: 2px #ffffff;
-      text-stroke: 2px #ffffff;
+      text-shadow:
+        /* 白色外描边（多个方向模拟描边） */
+        -2px -2px 0 #ffffff,
+        2px -2px 0 #ffffff,
+        -2px 2px 0 #ffffff,
+        2px 2px 0 #ffffff,
+        -2px 0 0 #ffffff,
+        2px 0 0 #ffffff,
+        0 -2px 0 #ffffff,
+        0 2px 0 #ffffff,
+        /* 黑色阴影增强对比 */
+        4px 4px 8px rgba(0, 0, 0, 0.8);
       clip-path: inset(0 100% 0 0);
     }
   </style>

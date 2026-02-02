@@ -47,7 +47,7 @@ def generate_lyrics_from_audio(audio_file_path, to_traditional=False):
                     word_data['word'] = converter.convert(word_data['word'])
         print("✓ 已转换为繁体中文")
 
-    # 提取逐字时间轴（基于 segment 分组分句）
+    # 提取逐字时间轴（基于 segment 分组分句，词级别时间标签）
     lyrics = []
 
     for segment_idx, segment in enumerate(result['segments']):
@@ -58,25 +58,24 @@ def generate_lyrics_from_audio(audio_file_path, to_traditional=False):
                 lyrics.append({
                     'char': ' ',  # 空格表示句子边界
                     'startTime': round(result['segments'][segment_idx - 1]['end'], 3),
-                    'duration': 0
+                    'duration': 0,
+                    'wordEnd': True  # 标记词边界
                 })
 
             for word_data in segment['words']:
                 word = word_data['word'].strip()
                 word_start = word_data['start']
                 word_end = word_data['end']
-
-                # 将词内的字平均分配时间
                 word_duration = word_end - word_start
-                char_start = word_start
-                for i, char in enumerate(word):
-                    char_duration = word_duration / len(word) if len(word) > 0 else 0
+
+                # 词内的所有字共享一个时间标签
+                for char in word:
                     lyrics.append({
                         'char': char,
-                        'startTime': round(char_start, 3),
-                        'duration': round(char_duration, 3)
+                        'startTime': round(word_start, 3),
+                        'duration': round(word_duration, 3),
+                        'wordEnd': char == word[-1]  # 标记词的最后一个字
                     })
-                    char_start += char_duration
 
     # 生成输出文件路径（在音频文件同目录）
     audio_dir = os.path.dirname(os.path.abspath(audio_file_path))
@@ -109,23 +108,32 @@ def generate_lyrics_from_audio(audio_file_path, to_traditional=False):
 
 
 def lyrics_to_text_format(lyrics):
-    """将歌词转换为文本格式: [startTime+duration]字[startTime+duration]字..."""
+    """将歌词转换为文本格式: [startTime+duration]字字字[startTime+duration]字..."""
     lines = []
     current_line = ""
+    prev_start_time = None
 
     for lyric_char in lyrics:
         char = lyric_char['char']
         start_time = lyric_char['startTime']
         duration = lyric_char['duration']
+        is_word_end = lyric_char.get('wordEnd', False)
 
         # 空格字符表示停顿/间隙，触发换行
         if char == ' ':
             if current_line:
                 lines.append(current_line)
             current_line = ""
+            prev_start_time = None
         else:
-            # 添加字和时间信息（时间在前，字在后）
-            current_line += f"[{start_time:.2f}+{duration:.2f}]{char}"
+            # 检测是否是新词的第一个字（时间标签不同）
+            if prev_start_time != start_time:
+                # 新词，添加时间标签
+                current_line += f"[{start_time:.2f}+{duration:.2f}]{char}"
+                prev_start_time = start_time
+            else:
+                # 同一词内的后续字，只添加字符
+                current_line += char
 
     # 添加最后一行
     if current_line:

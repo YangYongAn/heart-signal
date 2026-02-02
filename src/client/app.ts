@@ -39,18 +39,31 @@ function parseLyricsText(text: string): LyricSentence[] {
 
   for (const line of lines) {
     const chars: LyricChar[] = [];
-    // 匹配 [time+duration]字 格式
-    const regex = /\[(\d+\.?\d*)\+(\d+\.?\d*)\](.)/g;
+    // 匹配 [time+duration]字字字... 格式（一个标签可以对应多个字）
+    const regex = /\[(\d+\.?\d*)\+(\d+\.?\d*)\]([^\[\]]*)/g;
     let match;
 
     while ((match = regex.exec(line)) !== null) {
-      // 忽略空格停顿标记，只收集实际的字符
-      if (match[3] !== ' ') {
-        chars.push({
-          char: match[3],
-          startTime: parseFloat(match[1]),
-          duration: parseFloat(match[2])
-        });
+      const startTime = parseFloat(match[1]);
+      const duration = parseFloat(match[2]);
+      const charStr = match[3];
+
+      // 忽略空格停顿标记
+      if (charStr === ' ') continue;
+
+      // 将多个字平均分配时间
+      if (charStr.length > 0) {
+        const charDuration = duration / charStr.length;
+        let currentTime = startTime;
+
+        for (const char of charStr) {
+          chars.push({
+            char: char,
+            startTime: parseFloat(currentTime.toFixed(3)),
+            duration: parseFloat(charDuration.toFixed(3))
+          });
+          currentTime += charDuration;
+        }
       }
     }
 
@@ -386,18 +399,31 @@ class LyricsManager {
 
     for (const line of lines) {
       const chars: LyricChar[] = [];
-      // 匹配 [time+duration]字 格式
-      const regex = /\[(\d+\.?\d*)\+(\d+\.?\d*)\](.)/g;
+      // 匹配 [time+duration]字字字... 格式（一个标签可以对应多个字）
+      const regex = /\[(\d+\.?\d*)\+(\d+\.?\d*)\]([^\[\]]*)/g;
       let match;
 
       while ((match = regex.exec(line)) !== null) {
-        // 忽略空格停顿标记，只收集实际的字符
-        if (match[3] !== ' ') {
-          chars.push({
-            char: match[3],
-            startTime: parseFloat(match[1]),
-            duration: parseFloat(match[2])
-          });
+        const startTime = parseFloat(match[1]);
+        const duration = parseFloat(match[2]);
+        const charStr = match[3];
+
+        // 忽略空格停顿标记
+        if (charStr === ' ') continue;
+
+        // 将多个字平均分配时间
+        if (charStr.length > 0) {
+          const charDuration = duration / charStr.length;
+          let currentTime = startTime;
+
+          for (const char of charStr) {
+            chars.push({
+              char: char,
+              startTime: parseFloat(currentTime.toFixed(3)),
+              duration: parseFloat(charDuration.toFixed(3))
+            });
+            currentTime += charDuration;
+          }
         }
       }
 
@@ -471,15 +497,15 @@ class LyricsManager {
           const charProgress = (elapsed - lyricChar.startTime) / lyricChar.duration;
           const rightClip = Math.round((1 - charProgress) * 100);
           fgSpan.style.clipPath = `inset(0 ${rightClip}% 0 0)`;
-          charEl.style.opacity = '1'; // 字完全可见
+          charEl.style.opacity = '1';
         } else if (elapsed >= lyricChar.startTime + lyricChar.duration) {
           // 已播放完的字 - 完全显示高亮
           fgSpan.style.clipPath = 'inset(0 0% 0 0)';
           charEl.style.opacity = '1';
         } else {
-          // 未到达的字 - 不显示高亮
+          // 未到达的字 - 白色显示，不显示高亮层
           fgSpan.style.clipPath = 'inset(0 100% 0 0)';
-          charEl.style.opacity = '0.5';
+          charEl.style.opacity = '1'; // 保持完全可见，不要变暗
         }
       }
     }
@@ -507,7 +533,7 @@ class LyricsManager {
       // 字的容器
       const charSpan = document.createElement('span');
       charSpan.className = 'char';
-      charSpan.style.opacity = '0.5'; // 默认较暗
+      charSpan.style.opacity = '1'; // 所有字默认完全可见
 
       // 底层 - 白色文字
       const bgSpan = document.createElement('span');
