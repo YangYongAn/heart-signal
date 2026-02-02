@@ -32,6 +32,7 @@
       width: 100vw;
       display: flex;
       flex-direction: column;
+      gap: 0;
     }
 
     .bottom-bar {
@@ -41,6 +42,7 @@
       padding: 15px 20px;
       border-top: 1px solid #222;
       gap: 20px;
+      flex-shrink: 0;
     }
 
     .status-group {
@@ -112,11 +114,12 @@
     .container {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
       justify-content: flex-start;
       flex: 1;
-      padding: 20px;
-      gap: 20px;
+      padding: 12px 20px;
+      gap: 12px;
+      min-height: 0;
     }
 
     .header {
@@ -124,8 +127,8 @@
       align-items: center;
       justify-content: space-between;
       width: 100%;
-      max-width: 1400px;
       gap: 30px;
+      flex-shrink: 0;
     }
 
     .header-left {
@@ -135,7 +138,7 @@
     }
 
     .title {
-      font-size: 3rem;
+      font-size: clamp(2.5rem, 4vw, 5rem);
       font-weight: bold;
       color: #ff4757;
       text-shadow: 0 0 20px rgba(255, 71, 87, 0.5);
@@ -170,7 +173,7 @@
 
     .bpm-value {
       font-family: 'LED', monospace;
-      font-size: 5rem;
+      font-size: clamp(4rem, 8vw, 8rem);
       font-weight: normal;
       color: #ff4757;
       line-height: 1;
@@ -184,13 +187,13 @@
 
     .ecg-container {
       width: 100%;
-      max-width: 1400px;
       flex: 1;
       border: 2px solid #333;
       border-radius: 10px;
       background: #111;
       position: relative;
       overflow: hidden;
+      min-height: 0;
     }
 
     #ecg-canvas {
@@ -214,7 +217,7 @@
 
     .lyrics-line {
       font-family: 'GenSenRounded', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-      font-size: 6rem;
+      font-size: clamp(5rem, 12vw, 12rem);
       font-weight: bold;
       text-align: center;
       white-space: nowrap;
