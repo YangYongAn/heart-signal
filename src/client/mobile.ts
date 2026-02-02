@@ -92,6 +92,12 @@ class MobileApp {
    */
   private async init() {
     console.log('[MobileApp.init] 初始化开始');
+
+    // 清除超时提示定时器
+    if (window.__clearLoginTimeout) {
+      window.__clearLoginTimeout();
+    }
+
     try {
       // 登录
       console.log('[MobileApp.init] 开始用户登录...');

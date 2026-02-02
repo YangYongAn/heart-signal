@@ -65,4 +65,9 @@ interface Window {
    * ESN 框架注入的全局 API 对象
    */
   api: ESNAPI;
+
+  /**
+   * 清除登录超时定时器
+   */
+  __clearLoginTimeout?: () => void;
 }
