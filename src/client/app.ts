@@ -25,28 +25,28 @@ const MODE_CONFIGS: Record<ECGMode, ModeConfig> = {
   [ECGMode.NORMAL]: {
     color: '#ff4757',
     shadowColor: '#ff4757',
-    lineWidth: 2,
+    lineWidth: 3,
     name: '正常模式',
     background: '#111'
   },
   [ECGMode.EXCITED]: {
     color: '#ff6b6b',
     shadowColor: '#ff0000',
-    lineWidth: 3,
+    lineWidth: 4,
     name: '激动模式',
     background: '#1a0000'
   },
   [ECGMode.DEATH]: {
     color: '#999',
     shadowColor: '#222',
-    lineWidth: 3,
+    lineWidth: 4,
     name: '死亡模式',
     background: '#000'
   },
   [ECGMode.MUSIC]: {
     color: '#5f27cd',
     shadowColor: '#341f97',
-    lineWidth: 2,
+    lineWidth: 3,
     name: '音乐模式',
     background: '#0a0a0a'
   }
@@ -72,21 +72,21 @@ interface WaveParams {
 
 const WAVE_PRESETS: Record<string, Omit<WaveParams, 'amplitude'>> = {
   normal: {
-    phaseStep: 0.1,
+    phaseStep: 0.067,
     targetAmplitude: 1.0,
-    noise: 0,
+    noise: 0.02,
     qrsGain: 1.0,
     harmonics: false
   },
   excited: {
-    phaseStep: 0.18,
+    phaseStep: 0.12,
     targetAmplitude: 1.0,
     noise: 0.15,
     qrsGain: 1.6,
     harmonics: true
   },
   death: {
-    phaseStep: 0.06,
+    phaseStep: 0.04,
     targetAmplitude: 0,
     noise: 0,
     qrsGain: 1.0,
@@ -100,7 +100,8 @@ const WAVE_PRESETS: Record<string, Omit<WaveParams, 'amplitude'>> = {
 class AudioAnalyzer {
   private audioContext?: AudioContext;
   private analyser?: AnalyserNode;
-  private dataArray?: Uint8Array;
+  private freqArray?: Uint8Array;
+  private waveArray?: Uint8Array;
   private source?: MediaElementAudioSourceNode;
   private audio?: HTMLAudioElement;
 
@@ -108,10 +109,11 @@ class AudioAnalyzer {
     try {
       this.audioContext = new AudioContext();
       this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 256;
+      this.analyser.fftSize = 1024;
+      this.analyser.smoothingTimeConstant = 0.8;
 
-      const bufferLength = this.analyser.frequencyBinCount;
-      this.dataArray = new Uint8Array(bufferLength);
+      this.freqArray = new Uint8Array(this.analyser.frequencyBinCount);
+      this.waveArray = new Uint8Array(this.analyser.fftSize);
 
       this.audio = new Audio(audioUrl);
       this.audio.crossOrigin = 'anonymous';
@@ -127,26 +129,52 @@ class AudioAnalyzer {
     }
   }
 
-  getFrequencyData(): number[] {
-    if (!this.analyser || !this.dataArray) return [];
+  /**
+   * 获取时域波形数据（归一化到 -1 ~ 1）
+   */
+  getWaveformData(): number[] {
+    if (!this.analyser || !this.waveArray) return [];
     // @ts-expect-error - Uint8Array 类型兼容性问题
-    this.analyser.getByteFrequencyData(this.dataArray);
+    this.analyser.getByteTimeDomainData(this.waveArray);
     const result: number[] = [];
-    for (let i = 0; i < this.dataArray.length; i++) {
-      result.push((this.dataArray[i] / 255) * 2 - 1);
+    for (let i = 0; i < this.waveArray.length; i++) {
+      result.push((this.waveArray[i] / 128) - 1);
     }
     return result;
   }
 
-  getAverageVolume(): number {
-    if (!this.analyser || !this.dataArray) return 0;
+  /**
+   * 获取低/中/高频段能量
+   */
+  getBandEnergy(): { bass: number; mid: number; treble: number } {
+    if (!this.analyser || !this.freqArray) return { bass: 0, mid: 0, treble: 0 };
     // @ts-expect-error - Uint8Array 类型兼容性问题
-    this.analyser.getByteFrequencyData(this.dataArray);
+    this.analyser.getByteFrequencyData(this.freqArray);
+
+    const len = this.freqArray.length;
+    const third = Math.floor(len / 3);
+    let bass = 0, mid = 0, treble = 0;
+
+    for (let i = 0; i < third; i++) bass += this.freqArray[i];
+    for (let i = third; i < third * 2; i++) mid += this.freqArray[i];
+    for (let i = third * 2; i < len; i++) treble += this.freqArray[i];
+
+    return {
+      bass: bass / (third * 255),
+      mid: mid / (third * 255),
+      treble: treble / (third * 255)
+    };
+  }
+
+  getAverageVolume(): number {
+    if (!this.analyser || !this.freqArray) return 0;
+    // @ts-expect-error - Uint8Array 类型兼容性问题
+    this.analyser.getByteFrequencyData(this.freqArray);
     let sum = 0;
-    for (let i = 0; i < this.dataArray.length; i++) {
-      sum += this.dataArray[i];
+    for (let i = 0; i < this.freqArray.length; i++) {
+      sum += this.freqArray[i];
     }
-    return (sum / this.dataArray.length) / 255;
+    return (sum / this.freqArray.length) / 255;
   }
 
   stop() {
@@ -319,6 +347,8 @@ class ECGRenderer {
       ctx.beginPath();
       ctx.strokeStyle = config.color;
       ctx.lineWidth = config.lineWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
       ctx.shadowBlur = this.mode === ECGMode.DEATH ? 0 : 10;
       ctx.shadowColor = config.shadowColor;
 
@@ -327,7 +357,7 @@ class ECGRenderer {
 
       for (let i = 0; i < this.dataPoints.length; i++) {
         const x = i * pointSpacing;
-        const y = midY - (this.dataPoints[i] * height * 0.4);
+        const y = midY - (this.dataPoints[i] * height * 0.25);
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
@@ -444,7 +474,7 @@ class WSClient {
 class ECGWaveGenerator {
   private phase = 0;
   private params: WaveParams = {
-    phaseStep: 0.1,
+    phaseStep: 0.067,
     amplitude: 1.0,
     targetAmplitude: 1.0,
     noise: 0,
@@ -644,7 +674,7 @@ class App {
         }
         this.updateBPM();
       }
-    }, 20);
+    }, 30);
   }
 
   private setupKeyboardEvents() {
@@ -719,25 +749,60 @@ class App {
    */
   private async startMusicMode() {
     this.soundEffects.stopAlarm();
+    this.soundEffects.stopFlatline();
     const audioUrl = '/music.wav';
 
     this.audioAnalyzer = new AudioAnalyzer();
     await this.audioAnalyzer.init(audioUrl);
 
-    this.musicInterval = setInterval(() => {
-      if (this.audioAnalyzer) {
-        const frequencyData = this.audioAnalyzer.getFrequencyData();
-        const points = frequencyData.slice(0, 200);
-        while (points.length < 200) {
-          points.push(0);
-        }
-        this.ecg.setDataPoints(points);
+    // 帧间平滑缓冲
+    let smoothed: number[] = new Array(200).fill(0);
 
-        const volume = this.audioAnalyzer.getAverageVolume();
-        this.currentBPM = Math.round(60 + volume * 100);
-        this.updateBPM();
+    this.musicInterval = setInterval(() => {
+      if (!this.audioAnalyzer) return;
+
+      const waveform = this.audioAnalyzer.getWaveformData();
+      const band = this.audioAnalyzer.getBandEnergy();
+      const srcLen = waveform.length;
+      const targetLen = 200;
+
+      // 将时域波形插值到 200 个点
+      const raw: number[] = [];
+      for (let i = 0; i < targetLen; i++) {
+        const srcIndex = (i / targetLen) * srcLen;
+        const low = Math.floor(srcIndex);
+        const high = Math.min(low + 1, srcLen - 1);
+        const t = srcIndex - low;
+        raw.push((waveform[low] ?? 0) * (1 - t) + (waveform[high] ?? 0) * t);
       }
-    }, 50);
+
+      // 低频（鼓点）驱动振幅放大
+      const bassBoost = 1 + band.bass * 1.5;
+
+      const points: number[] = [];
+      for (let i = 0; i < targetLen; i++) {
+        let v = raw[i] * bassBoost;
+        // 帧间平滑（50% 当前帧 + 50% 上一帧）
+        v = v * 0.5 + smoothed[i] * 0.5;
+        // 钳制在 -1 ~ 1 范围内，确保不超出画布
+        v = Math.max(-1, Math.min(1, v));
+        points.push(v);
+      }
+
+      // 三点均值平滑，消除锯齿和噪点
+      const clean: number[] = [points[0]];
+      for (let i = 1; i < points.length - 1; i++) {
+        clean.push((points[i - 1] + points[i] + points[i + 1]) / 3);
+      }
+      clean.push(points[points.length - 1]);
+
+      smoothed = clean;
+      this.ecg.setDataPoints(clean);
+
+      const volume = this.audioAnalyzer.getAverageVolume();
+      this.currentBPM = Math.round(60 + volume * 100);
+      this.updateBPM();
+    }, 30);
   }
 
   private handleMessage(message: WSMessage) {
