@@ -11,6 +11,34 @@ enum ECGMode {
 }
 
 /**
+ * 歌词字符数据 - 每个字都有精确时间轴
+ */
+interface LyricChar {
+  char: string;
+  startTime: number; // 开始时间（秒）
+  duration: number;  // 持续时间（秒）
+}
+
+/**
+ * 示例歌词数据 - 每个字都有时间轴信息
+ * 可以通过 Python 脚本自动生成
+ */
+const LYRICS: LyricChar[] = [
+  { char: '在', startTime: 0, duration: 0.3 },
+  { char: '你', startTime: 0.3, duration: 0.3 },
+  { char: '心', startTime: 0.6, duration: 0.3 },
+  { char: '中', startTime: 0.9, duration: 0.3 },
+  { char: '我', startTime: 1.2, duration: 0.3 },
+  { char: '是', startTime: 1.5, duration: 0.3 },
+  { char: '谁', startTime: 1.8, duration: 0.6 },
+  { char: '是', startTime: 2.5, duration: 0.3 },
+  { char: '你', startTime: 2.8, duration: 0.3 },
+  { char: '的', startTime: 3.1, duration: 0.3 },
+  { char: '一', startTime: 3.4, duration: 0.3 },
+  { char: '切', startTime: 3.7, duration: 0.8 }
+];
+
+/**
  * 模式配置
  */
 interface ModeConfig {
@@ -19,6 +47,7 @@ interface ModeConfig {
   lineWidth: number;
   name: string;
   background: string;
+  opacity?: number; // 波形透明度 (0-1)
 }
 
 const MODE_CONFIGS: Record<ECGMode, ModeConfig> = {
@@ -48,7 +77,8 @@ const MODE_CONFIGS: Record<ECGMode, ModeConfig> = {
     shadowColor: '#ffffff',
     lineWidth: 3,
     name: '🎵',
-    background: '#0a0a0a'
+    background: '#0a0a0a',
+    opacity: 0.3
   }
 };
 
@@ -284,6 +314,77 @@ class SoundEffects {
 }
 
 /**
+ * 歌词管理器 - 处理 KTV 逐字填色
+ */
+class LyricsManager {
+  private startTime = 0;
+  private lyricsContainer: HTMLElement | null = null;
+  private lyricsLine: HTMLElement | null = null;
+
+  constructor() {
+    this.lyricsContainer = document.getElementById('lyrics-container') as HTMLElement | null;
+    this.lyricsLine = document.getElementById('lyrics-line') as HTMLElement | null;
+    this.renderAllLyrics();
+  }
+
+  start() {
+    this.startTime = Date.now() / 1000;
+    if (this.lyricsContainer) {
+      this.lyricsContainer.classList.add('show');
+    }
+  }
+
+  stop() {
+    if (this.lyricsContainer) {
+      this.lyricsContainer.classList.remove('show');
+    }
+  }
+
+  updateLyrics() {
+    if (!this.lyricsLine) return;
+
+    const elapsed = Date.now() / 1000 - this.startTime;
+
+    // 更新每个字的填色状态
+    const chars = this.lyricsLine.querySelectorAll('.char');
+    for (let i = 0; i < chars.length; i++) {
+      const lyricChar = LYRICS[i];
+      if (!lyricChar) continue;
+
+      // 检查当前字是否应该填色
+      if (elapsed >= lyricChar.startTime && elapsed < lyricChar.startTime + lyricChar.duration) {
+        // 计算字的填色进度
+        const charProgress = (elapsed - lyricChar.startTime) / lyricChar.duration;
+        chars[i].classList.add('active');
+        // 可以在这里设置更细粒度的透明度变化
+        (chars[i] as HTMLElement).style.opacity = (0.3 + charProgress * 0.7).toString();
+      } else if (elapsed >= lyricChar.startTime + lyricChar.duration) {
+        // 已播放完的字
+        chars[i].classList.add('active');
+        (chars[i] as HTMLElement).style.opacity = '1';
+      } else {
+        // 未到达的字
+        chars[i].classList.remove('active');
+        (chars[i] as HTMLElement).style.opacity = '0.3';
+      }
+    }
+  }
+
+  private renderAllLyrics() {
+    if (!this.lyricsLine) return;
+
+    this.lyricsLine.innerHTML = '';
+    for (const lyricChar of LYRICS) {
+      const span = document.createElement('span');
+      span.className = 'char';
+      span.textContent = lyricChar.char;
+      span.style.opacity = '0.3';
+      this.lyricsLine.appendChild(span);
+    }
+  }
+}
+
+/**
  * 心电图绘制器
  */
 class ECGRenderer {
@@ -345,7 +446,20 @@ class ECGRenderer {
 
     if (this.dataPoints.length > 1) {
       ctx.beginPath();
-      ctx.strokeStyle = config.color;
+
+      // 应用透明度（音乐模式降低波形透明度）
+      const opacity = config.opacity ?? 1;
+      if (opacity < 1) {
+        // 将 hex 颜色转换为 rgba
+        const rgb = parseInt(config.color.slice(1), 16);
+        const r = (rgb >> 16) & 255;
+        const g = (rgb >> 8) & 255;
+        const b = rgb & 255;
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      } else {
+        ctx.strokeStyle = config.color;
+      }
+
       ctx.lineWidth = config.lineWidth;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -616,6 +730,7 @@ class App {
   private audioAnalyzer?: AudioAnalyzer;
   private soundEffects = new SoundEffects();
   private waveGenerator = new ECGWaveGenerator();
+  private lyricsManager = new LyricsManager();
   private interactionCount = 0;
   private currentBPM = 72;
   private lastDisplayedBPM = -1; // 上次显示的 BPM，用于避免不必要的 DOM 更新
@@ -728,6 +843,7 @@ class App {
 
     // 停止音乐相关
     if (prevMode === ECGMode.MUSIC) {
+      this.lyricsManager.stop();
       if (this.musicInterval) {
         clearInterval(this.musicInterval);
         this.musicInterval = undefined;
@@ -776,64 +892,27 @@ class App {
   }
 
   /**
-   * 音乐模式
+   * 音乐模式 - 播放音乐并显示 KTV 歌词
    */
   private async startMusicMode() {
     this.soundEffects.stopAlarm();
     this.soundEffects.stopFlatline();
-    const audioUrl = '/music.wav';
 
+    // 初始化音频分析器用于播放
     this.audioAnalyzer = new AudioAnalyzer();
-    await this.audioAnalyzer.init(audioUrl);
+    try {
+      await this.audioAnalyzer.init('/music.wav');
+    } catch (error) {
+      console.error('Failed to load music:', error);
+    }
 
-    // 帧间平滑缓冲
-    let smoothed: number[] = new Array(200).fill(0);
+    // 启动歌词显示
+    this.lyricsManager.start();
 
+    // 定时更新歌词显示
     this.musicInterval = setInterval(() => {
-      if (!this.audioAnalyzer) return;
-
-      const waveform = this.audioAnalyzer.getWaveformData();
-      const band = this.audioAnalyzer.getBandEnergy();
-      const srcLen = waveform.length;
-      const targetLen = 200;
-
-      // 将时域波形插值到 200 个点
-      const raw: number[] = [];
-      for (let i = 0; i < targetLen; i++) {
-        const srcIndex = (i / targetLen) * srcLen;
-        const low = Math.floor(srcIndex);
-        const high = Math.min(low + 1, srcLen - 1);
-        const t = srcIndex - low;
-        raw.push((waveform[low] ?? 0) * (1 - t) + (waveform[high] ?? 0) * t);
-      }
-
-      // 低频（鼓点）驱动振幅放大
-      const bassBoost = 1 + band.bass * 1.5;
-
-      const points: number[] = [];
-      for (let i = 0; i < targetLen; i++) {
-        let v = raw[i] * bassBoost;
-        // 帧间平滑（50% 当前帧 + 50% 上一帧）
-        v = v * 0.5 + smoothed[i] * 0.5;
-        // 钳制在 -1 ~ 1 范围内，确保不超出画布
-        v = Math.max(-1, Math.min(1, v));
-        points.push(v);
-      }
-
-      // 三点均值平滑，消除锯齿和噪点
-      const clean: number[] = [points[0]];
-      for (let i = 1; i < points.length - 1; i++) {
-        clean.push((points[i - 1] + points[i] + points[i + 1]) / 3);
-      }
-      clean.push(points[points.length - 1]);
-
-      smoothed = clean;
-      this.ecg.setDataPoints(clean);
-
-      const volume = this.audioAnalyzer.getAverageVolume();
-      this.currentBPM = Math.round(60 + volume * 100);
-      this.updateBPM();
-    }, 30);
+      this.lyricsManager.updateLyrics();
+    }, 50);
   }
 
   private handleMessage(message: WSMessage) {
