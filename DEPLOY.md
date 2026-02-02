@@ -33,7 +33,10 @@ Zeabur 会：
 2. ✅ 检测 `zbpack.json` 配置
 3. ✅ 运行 `bun install` 安装依赖
 4. ✅ 启动应用：`bun src/server/index.ts`
-5. ✅ 分配公网域名
+5. ✅ 自动设置 `PORT` 环境变量（通常为 8080）
+6. ✅ 分配公网域名
+
+**注意**：应用已配置为自动读取 `PORT` 环境变量，无需手动设置。
 
 ## 自动更新
 
@@ -95,9 +98,10 @@ wss://your-service-name.zeabur.app/ws
 **❌ "Module not found: bun"**
 - Zeabur 会自动提供 Bun，不需要手动安装
 
-**❌ "Port already in use"**
-- 检查 `src/server/config/config.ts` 中的端口号
-- Zeabur 会通过 `process.env.PORT` 自动分配端口
+**❌ "Port already in use"** 或 **"Cannot listen on port 2026"**
+- ✅ 已修复：`src/server/config/config.ts` 现在读取 `process.env.PORT`
+- Zeabur 会自动设置 `PORT=8080`（或其他可用端口）
+- 本地开发时无 PORT 环境变量，自动降级到 2026
 
 **❌ "WebSocket connection failed"**
 - 确保使用 `wss://` (secure WebSocket)
