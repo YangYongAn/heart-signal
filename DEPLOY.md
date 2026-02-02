@@ -1,192 +1,146 @@
-# 自动部署指南
+# Zeabur 部署指南
 
-本项目配置了 GitHub Actions，当 main 分支有新 commit 时，自动部署到你的云服务器。
+本项目已配置为在 Zeabur 上自动部署。当你 push 代码到 GitHub main 分支时，Zeabur 会自动拉取并部署。
 
 ## 前置要求
 
-### 1. 云服务器准备
+- GitHub 账号
+- Zeabur 账号（免费注册：https://zeabur.com）
 
-确保你的云服务器上已安装：
-- Bun 1.3.8
-- Git
-- PM2（用于进程管理，可选）
+## 部署步骤
 
-```bash
-# 安装 Bun
-curl -fsSL https://bun.sh/install | bash
+### 1. 连接 GitHub 仓库
 
-# 安装 PM2
-npm install -g pm2
+1. 登录 [Zeabur 控制台](https://dash.zeabur.com)
+2. 点击 **"Create Project"** → **"Deploy new service"** → **"GitHub"**
+3. 选择 `heart-signal` 仓库
+4. Zeabur 会自动检测项目为 Bun 项目
+
+### 2. 配置环境变量（可选）
+
+如果需要环境变量，在 Zeabur 控制台的 **Variables** 中添加：
+
 ```
-
-### 2. 在服务器上克隆项目
-
-```bash
-cd /path/to/your/projects
-git clone https://github.com/YangYongAn/heart-signal.git
-cd heart-signal
-bun install
-```
-
-### 3. 配置 GitHub Actions Secrets
-
-在你的 GitHub 仓库设置中，添加以下 secrets（Settings → Secrets and variables → Actions → New repository secret）：
-
-| Secret 名称 | 说明 | 示例 |
-|-----------|------|------|
-| `SERVER_HOST` | 云服务器公网 IP | `203.0.113.42` |
-| `SERVER_USER` | SSH 用户名 | `ubuntu` |
-| `SERVER_PORT` | SSH 端口（可选，默认 22） | `22` |
-| `SSH_PRIVATE_KEY` | 本地 SSH 私钥内容 | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
-| `PROJECT_PATH` | 项目在服务器上的绝对路径 | `/home/ubuntu/heart-signal` |
-
-### 4. 生成 SSH 密钥对
-
-**本地电脑**生成新的 SSH 密钥（如果还没有）：
-
-```bash
-ssh-keygen -t ed25519 -C "heart-signal-deployment"
-# 保存在：~/.ssh/heart-signal
-# 不设置密码（直接回车两次）
-```
-
-### 5. 配置服务器的 SSH 认证
-
-将你本地的 **公钥** 添加到服务器：
-
-```bash
-# 本地电脑执行
-cat ~/.ssh/heart-signal.pub
-
-# 复制内容，然后在服务器上执行：
-echo "your-public-key-content" >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
-```
-
-### 6. 获取 SSH 私钥供 GitHub 使用
-
-```bash
-# 本地电脑执行
-cat ~/.ssh/heart-signal
-```
-
-复制全部内容，粘贴到 GitHub Secrets 中的 `SSH_PRIVATE_KEY`。
-
-## 工作流说明
-
-`.github/workflows/deploy.yml` 会在以下情况触发：
-
-✅ **触发条件**：任何 commit 被 push 到 main 分支
-
-**部署步骤**：
-1. Checkout 代码
-2. 通过 SSH 连接到服务器
-3. `git pull` 拉取最新代码
-4. `bun install` 安装依赖
-5. `bun run typecheck` 类型检查
-6. 使用 PM2 重启应用（或启动新应用）
-
-## 查看部署日志
-
-1. 在 GitHub 仓库中，点击 "Actions" 标签
-2. 选择最近的 workflow 运行
-3. 点击 "deploy" job 查看详细日志
-
-## 服务器上管理应用
-
-### 使用 PM2
-
-```bash
-# 查看运行中的应用
-pm2 list
-
-# 查看日志
-pm2 logs heart-signal
-
-# 停止应用
-pm2 stop heart-signal
-
-# 重启应用
-pm2 restart heart-signal
-
-# 删除应用
-pm2 delete heart-signal
-```
-
-### 不使用 PM2（直接运行）
-
-如果不使用 PM2，编辑 `.github/workflows/deploy.yml`，将最后一行改为：
-
-```yaml
-# 使用 nohup 后台运行
-nohup bun src/server/index.ts > /var/log/heart-signal.log 2>&1 &
-```
-
-## 故障排查
-
-### 连接失败
-
-```bash
-# 本地测试 SSH 连接
-ssh -i ~/.ssh/heart-signal -p 22 ubuntu@203.0.113.42
-
-# 检查服务器上的 authorized_keys 权限
-chmod 700 ~/.ssh
-chmod 600 ~/.ssh/authorized_keys
-```
-
-### 部署脚本失败
-
-在服务器上手动运行命令检查：
-
-```bash
-cd /path/to/heart-signal
-git pull origin main
-bun install
-bun run typecheck
-```
-
-### Bun 命令找不到
-
-```bash
-# 检查 Bun 是否正确安装
-which bun
-bun --version
-
-# 或添加 Bun 到 PATH
-echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-## 环境变量
-
-如果项目需要环境变量（如 API 密钥），在服务器上创建 `.env` 文件：
-
-```bash
-# 服务器上
-cat > /path/to/heart-signal/.env << EOF
-SOME_API_KEY=xxx
+# 示例
+SOME_API_KEY=your-api-key
 DEBUG=true
-EOF
 ```
 
-然后在应用中读取：
+### 3. 开始部署
 
-```typescript
-const apiKey = Bun.env.SOME_API_KEY;
-```
+Zeabur 会：
+1. ✅ 克隆你的 GitHub 仓库
+2. ✅ 检测 `zbpack.json` 配置
+3. ✅ 运行 `bun install` 安装依赖
+4. ✅ 启动应用：`bun src/server/index.ts`
+5. ✅ 分配公网域名
 
-## 下次部署
+## 自动更新
 
-只需 push 代码到 main 分支，GitHub Actions 会自动：
+配置完成后，只需要 push 代码：
 
 ```bash
 git add .
-git commit -m "feat: some change"
+git commit -m "feat: your changes"
 git push origin main
-# ✅ 自动部署到服务器！
 ```
+
+Zeabur 会自动拉取并重新部署（通常在 1-2 分钟内完成）。
+
+## 查看部署状态
+
+1. 在 Zeabur 控制台选择你的项目
+2. 点击 **"Deployments"** 标签查看部署历史
+3. 点击最新部署查看实时日志
+
+## 查看应用日志
+
+在 Zeabur 控制台：
+1. 选择项目
+2. 点击 **"Logs"** 标签
+3. 实时查看应用输出
+
+示例日志：
+```
+🚀 Server running at http://localhost:2026
+📡 WebSocket available at ws://localhost:2026/ws
+```
+
+## 获取公网访问地址
+
+部署完成后，Zeabur 会自动分配域名，格式为：
+
+```
+https://your-service-name.zeabur.app
+```
+
+WebSocket 地址：
+```
+wss://your-service-name.zeabur.app/ws
+```
+
+## 绑定自定义域名（可选）
+
+1. 在 Zeabur 控制台找到 **"Domains"** 部分
+2. 点击 **"Add Domain"**
+3. 输入你的域名
+4. 按照指示配置 DNS 记录
+
+## 故障排查
+
+### 部署失败
+
+检查 **Deployments** 标签中的错误日志。常见问题：
+
+**❌ "Module not found: bun"**
+- Zeabur 会自动提供 Bun，不需要手动安装
+
+**❌ "Port already in use"**
+- 检查 `src/server/config/config.ts` 中的端口号
+- Zeabur 会通过 `process.env.PORT` 自动分配端口
+
+**❌ "WebSocket connection failed"**
+- 确保使用 `wss://` (secure WebSocket)
+- 检查客户端代码中 WebSocket URL 是否正确
+
+### 环境不一致
+
+如果本地能运行，但 Zeabur 部署失败：
+
+1. 检查 `zbpack.json` 的配置
+2. 在本地运行 `bun run typecheck` 检查类型错误
+3. 查看 Zeabur 的完整部署日志
+
+## 性能优化
+
+### 启用缓存
+
+对于大文件（如字体），在应用中设置缓存头：
+
+```typescript
+response.headers.set('Cache-Control', 'public, max-age=31536000');
+```
+
+### 监控资源使用
+
+在 Zeabur 控制台的 **Metrics** 中查看：
+- CPU 使用率
+- 内存使用量
+- 网络流量
+
+## 成本
+
+Zeabur 免费额度通常足够个人项目使用。如果超出限额，会显示警告，你可以升级为付费计划。
+
+## 更多帮助
+
+- 官方文档：https://docs.zeabur.com
+- 社区论坛：https://zeabur.com/community
+- GitHub Issues：https://github.com/YangYongAn/heart-signal/issues
 
 ---
 
-如有问题，检查 GitHub Actions 日志获取详细错误信息。
+**快速链接：**
+- [Zeabur 控制台](https://dash.zeabur.com)
+- [Zeabur 文档](https://docs.zeabur.com)
+- [项目仓库](https://github.com/YangYongAn/heart-signal)
