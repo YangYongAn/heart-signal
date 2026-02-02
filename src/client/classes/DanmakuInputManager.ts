@@ -9,7 +9,7 @@ export class DanmakuInputManager {
   private cooldownNumber: HTMLElement | null;
   private lastSendTime = 0;
   private cooldownDuration = 3000; // 3 秒冷却时间
-  private maxLength = 50; // 最大字符数
+  private maxLength = 15; // 最大字符数
   private submitCallback: ((content: string) => void) | null = null;
   private countdownInterval: number | null = null;
   private submitButtonText = '发送'; // 按钮原始文本
@@ -82,7 +82,7 @@ export class DanmakuInputManager {
     }
 
     if (content.length > this.maxLength) {
-      alert(`弹幕长度不能超过 ${this.maxLength} 个字符`);
+      alert('弹幕长度不能超过 ' + this.maxLength + ' 个字符');
       return false;
     }
 

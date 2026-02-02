@@ -62,7 +62,6 @@
       display: flex;
       flex-direction: column;
       padding: 12px 12px 0;
-      gap: 8px;
       min-height: 0;
       overflow: hidden;
     }
@@ -73,13 +72,16 @@
       align-items: center;
       flex-shrink: 0;
       padding: 0 4px;
-      gap: 8px;
+      margin-bottom: 8px;
     }
 
     .header-left {
       display: flex;
       align-items: center;
-      gap: 8px;
+    }
+
+    .header-left > * + * {
+      margin-left: 8px;
     }
 
     .ecg-header h1 {
@@ -109,9 +111,12 @@
     .bpm-display {
       display: flex;
       align-items: baseline;
-      gap: 4px;
       font-family: 'LED', monospace;
       font-size: clamp(14px, 4vw, 18px);
+    }
+
+    .bpm-unit {
+      margin-left: 4px;
     }
 
     .bpm-value {
@@ -163,21 +168,48 @@
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      gap: 8px;
       overflow-y: auto;
       overflow-x: hidden;
       position: relative;
     }
 
+    .input-section > * + * {
+      margin-top: 8px;
+    }
+
+    .send-panel {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 16px;
+      flex-shrink: 0;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .send-panel > .input-container {
+      margin-top: 12px;
+    }
+
     .login-status {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
-      font-size: 15px;
+      padding: 0;
+      background: none;
+      border: none;
+      border-radius: 0;
+      font-size: 14px;
       flex-shrink: 0;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      box-shadow: none;
+    }
+
+    .login-status > * + * {
+      margin-left: 12px;
     }
 
     .user-avatar {
@@ -187,22 +219,28 @@
       flex-shrink: 0;
       object-fit: cover;
       background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(46, 204, 113, 0.4);
+      box-shadow: 0 0 12px rgba(46, 204, 113, 0.3);
     }
 
     .user-info {
       flex: 1;
       display: flex;
       align-items: center;
-      gap: 6px;
       overflow: hidden;
+    }
+
+    .user-info > * + * {
+      margin-left: 8px;
     }
 
     .user-name {
       font-weight: 600;
-      font-size: 16px;
+      font-size: 15px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      color: rgba(255, 255, 255, 0.9);
     }
 
     .login-error {
@@ -266,9 +304,12 @@
 
     .input-container {
       display: flex;
-      gap: 10px;
-      align-items: flex-end;
+      align-items: center;
       flex-shrink: 0;
+    }
+
+    .input-container > #danmaku-submit {
+      margin-left: 12px;
     }
 
     .input-wrapper {
@@ -280,14 +321,14 @@
     #danmaku-input {
       width: 100%;
       height: 48px;
-      padding: 0 60px 0 12px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 10px;
+      padding: 0 60px 0 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
       color: #fff;
-      font-size: 16px; /* iOS 至少需要 16px 以避免自动缩放 */
+      font-size: 16px;
       font-family: inherit;
-      transition: border-color 0.2s, background 0.2s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       -webkit-appearance: none;
       line-height: 48px;
       box-sizing: border-box;
@@ -295,38 +336,40 @@
 
     #danmaku-input:focus {
       outline: none;
-      border-color: rgba(46, 204, 113, 0.5);
-      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(46, 204, 113, 0.6);
+      background: rgba(0, 0, 0, 0.3);
+      box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.15);
     }
 
     #danmaku-input::placeholder {
-      color: #555;
+      color: rgba(255, 255, 255, 0.4);
     }
 
     .char-count {
       position: absolute;
-      right: 10px;
+      right: 14px;
       top: 50%;
       transform: translateY(-50%);
       font-size: 11px;
-      color: #555;
+      color: rgba(255, 255, 255, 0.4);
       line-height: 1;
       pointer-events: none;
       white-space: nowrap;
+      font-weight: 500;
     }
 
     #danmaku-submit {
-      padding: 0 20px;
+      padding: 0 24px;
       background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
       border: none;
-      border-radius: 10px;
+      border-radius: 14px;
       color: #fff;
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       white-space: nowrap;
-      min-width: 60px;
+      min-width: 64px;
       height: 48px;
       -webkit-appearance: none;
       -webkit-user-select: none;
@@ -334,19 +377,42 @@
       -webkit-touch-callout: none;
       line-height: 48px;
       flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #danmaku-submit::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.25);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
     }
 
     #danmaku-submit:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 6px 20px rgba(46, 204, 113, 0.45);
+    }
+
+    #danmaku-submit:hover:not(:disabled)::before {
+      width: 300px;
+      height: 300px;
     }
 
     #danmaku-submit:active:not(:disabled) {
-      transform: scale(0.97);
+      transform: translateY(0) scale(0.98);
     }
 
     #danmaku-submit:disabled {
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
     /* 冷却时间蒙层 */
@@ -384,7 +450,10 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+    }
+
+    .cooldown-label {
+      margin-top: 12px;
     }
 
     .cooldown-number {
@@ -487,13 +556,14 @@
       .ecg-section {
         flex: 0 0 50%;
         padding: 8px 8px 0;
-        gap: 6px;
       }
 
-      .input-section {
-        flex: 0 0 50%;
-        padding: 6px 8px 30px;
-        gap: 6px;
+      .ecg-header {
+        margin-bottom: 6px;
+      }
+
+      .input-section > * + * {
+        margin-top: 6px;
       }
 
       .ecg-header h1 {
@@ -504,10 +574,20 @@
         font-size: 12px;
       }
 
+      .send-panel {
+        padding: 14px;
+      }
+
+      .send-panel > .input-container {
+        margin-top: 10px;
+      }
+
       .login-status {
-        padding: 8px 10px;
-        font-size: 14px;
-        gap: 8px;
+        font-size: 13px;
+      }
+
+      .login-status > * + * {
+        margin-left: 10px;
       }
 
       .user-avatar {
@@ -516,31 +596,31 @@
       }
 
       .user-name {
-        font-size: 15px;
+        font-size: 14px;
       }
 
       #danmaku-input {
         font-size: 16px;
-        padding: 0 56px 0 10px;
+        padding: 0 56px 0 12px;
         height: 44px;
         line-height: 44px;
       }
 
       #danmaku-submit {
-        padding: 0 16px;
+        padding: 0 20px;
         font-size: 14px;
         height: 44px;
-        min-width: 56px;
+        min-width: 60px;
         line-height: 44px;
       }
 
       .char-count {
         font-size: 10px;
-        right: 8px;
+        right: 10px;
       }
 
-      .input-container {
-        gap: 8px;
+      .input-container > #danmaku-submit {
+        margin-left: 10px;
       }
 
       .cooldown-number {
@@ -598,28 +678,31 @@
       <button class="quick-phrase" data-text="random-luckin" disabled>二当家，我要喝瑞幸🎲</button>
       <button class="quick-phrase" data-text="random-skill" disabled>三当家，我要和你学🎲</button>
       <button class="quick-phrase" data-text="我也是米兰学院的" disabled>我也是米兰学院的</button>
-      <button class="quick-phrase" data-text="我有一个好消息" disabled>我有一个好消息</button>
+      <button class="quick-phrase" data-text="good-news" disabled><img src="https://koishi.js.org/QFace/assets/qq_emoji/8/apng/8.png" alt="" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 4px;">好消息</button>
+      <button class="quick-phrase" data-text="bad-news" disabled><img src="https://koishi.js.org/QFace/assets/qq_emoji/312/apng/312.png" alt="" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 4px;">坏消息</button>
     </div>
 
-    <div class="login-status" id="login-status">
-      <div class="spinner"></div>
-      <span>正在登录...</span>
-    </div>
-
-    <div class="input-container">
-      <div class="input-wrapper">
-        <input
-          type="text"
-          id="danmaku-input"
-          placeholder="输入弹幕内容..."
-          maxlength="50"
-          disabled
-        />
-        <div class="char-count" id="char-count-display">
-          <span id="char-count">0</span>/50
-        </div>
+    <div class="send-panel">
+      <div class="login-status" id="login-status">
+        <div class="spinner"></div>
+        <span>正在登录...</span>
       </div>
-      <button id="danmaku-submit" disabled>发送</button>
+
+      <div class="input-container">
+        <div class="input-wrapper">
+          <input
+            type="text"
+            id="danmaku-input"
+            placeholder="说点什么..."
+            maxlength="15"
+            disabled
+          />
+          <div class="char-count" id="char-count-display">
+            <span id="char-count">0</span>/15
+          </div>
+        </div>
+        <button id="danmaku-submit" disabled>发送</button>
+      </div>
     </div>
 
     <!-- 冷却时间蒙层 -->

@@ -6,6 +6,7 @@ import { WSClient } from './classes/WSClient';
 import { ECGWaveGenerator } from './classes/ECGWaveGenerator';
 import { ECGMode } from './types';
 import { MODE_CONFIGS, MODE_EMOJI_URLS } from './constants';
+import { escapeHtml } from './utils';
 import type { WSMessage } from '../shared/types';
 
 /**
@@ -23,14 +24,15 @@ class MobileApp {
   private currentBPM = 72;
   private currentMode: ECGMode = ECGMode.NORMAL;
   private modeEmojiImg?: HTMLImageElement;
+  private systemType: 'ios' | 'android' = 'ios';
 
   constructor() {
     console.log('[MobileApp] 构造函数被调用');
 
-    // 设置软键盘模式（仅 iOS 生效）
+    // 设置窗口属性（仅 iOS 生效）
     if (window.api && window.api.setWinAttr) {
-      window.api.setWinAttr({ softInputMode: 'pan', softInputBarEnabled: false });
-      console.log('[MobileApp] 已设置 softInputMode: pan, softInputBarEnabled: false');
+      window.api.setWinAttr({ softInputMode: 'pan', softInputBarEnabled: false, bounces: false });
+      console.log('[MobileApp] 已设置 softInputMode: pan, softInputBarEnabled: false, bounces: false');
     }
 
     // 初始化 ECG 渲染器
@@ -66,9 +68,19 @@ class MobileApp {
     this.ws = new WSClient(wsUrl, this.handleMessage.bind(this), this.handleStatusChange.bind(this));
     console.log('[MobileApp] WebSocket 客户端初始化完成');
 
+    // 获取系统类型
+    if (window.api && window.api.systemType) {
+      this.systemType = window.api.systemType;
+      console.log('[MobileApp] 系统类型:', this.systemType);
+    }
+
     // 设置事件监听
     this.setupEventListeners();
     console.log('[MobileApp] 事件监听设置完成');
+
+    // 设置键盘事件监听
+    this.setupKeyboardListeners();
+    console.log('[MobileApp] 键盘事件监听设置完成');
 
     // 启动应用
     console.log('[MobileApp] 准备启动应用...');
@@ -127,14 +139,10 @@ class MobileApp {
     if (!user) return;
 
     const statusEl = document.getElementById('login-status')!;
-    statusEl.innerHTML = `
-      <img src="${user.avatar}" alt="${user.name}" class="user-avatar" onerror="this.src=''">
-      <div class="user-info">
-        <span class="user-name">${user.name}</span>
-        <span>已连接</span>
-      </div>
-    `;
-    statusEl.style.background = 'rgba(46, 204, 113, 0.1)';
+    statusEl.innerHTML = '<img src="' + escapeHtml(user.avatar) + '" alt="' + escapeHtml(user.name) + '" class="user-avatar" onerror="this.src=\'\'">' +
+      '<div class="user-info">' +
+        '<span class="user-name">' + escapeHtml(user.name) + '</span>' +
+      '</div>';
 
     // 更新快捷语中的部门名称
     this.updateDeptQuickPhrase(user.deptName);
@@ -144,16 +152,21 @@ class MobileApp {
    * 更新部门快捷语
    */
   private updateDeptQuickPhrase(deptName?: string) {
-    if (!deptName) return;
+    const user = this.userManager.getUser();
+    if (!user) return;
 
     const quickPhrases = document.querySelectorAll('.quick-phrase');
     quickPhrases.forEach((btn) => {
       const element = btn as HTMLButtonElement;
       if (element.dataset.text === '我也是米兰学院的') {
-        const displayName = deptName.replace(/部$/, '分院');
-        const newText = `我也是米兰学院-${displayName}的`;
+        var newText = '我也是米兰学院的' + user.name;
+        if (deptName) {
+          const displayName = deptName.replace(/部$/, '分院');
+          newText = '我也是米兰学院-' + displayName + '的' + user.name;
+        }
+        // 只更新实际发送的内容，保持按钮显示文字不变
         element.dataset.text = newText;
-        element.textContent = newText;
+        // element.textContent 保持为"我也是米兰学院的"
       }
     });
   }
@@ -163,13 +176,11 @@ class MobileApp {
    */
   private showLoginError(message: string) {
     const errorEl = document.getElementById('login-error')!;
-    errorEl.textContent = `登录失败: ${message}`;
+    errorEl.textContent = '登录失败: ' + message;
     errorEl.style.display = 'block';
 
     const statusEl = document.getElementById('login-status')!;
-    statusEl.innerHTML = `
-      <span style="color: #e74c3c;">❌ 登录失败，请刷新重试</span>
-    `;
+    statusEl.innerHTML = '<span style="color: #e74c3c;">❌ 登录失败，请刷新重试</span>';
     statusEl.style.background = 'rgba(231, 76, 60, 0.1)';
 
     this.inputManager.disable();
@@ -222,6 +233,15 @@ class MobileApp {
           text = `二当家，我要喝${pick(luckinDrinks)}，${pick(luckinSugar)}${pick(luckinTemp)}`;
         } else if (text === 'random-boss') {
           text = `${pick(bossTitles)}真帅！`;
+        } else if (text === 'good-news' || text === 'bad-news') {
+          const user = this.userManager.getUser();
+          if (user) {
+            if (text === 'good-news') {
+              text = `${user.name}：我有好消息！[qq-emoji:183]`;
+            } else {
+              text = `${user.name}：我有坏消息！[qq-emoji:5]`;
+            }
+          }
         }
         if (text) {
           this.sendDanmaku(text, true); // 标记为快捷语
@@ -414,6 +434,50 @@ class MobileApp {
    */
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * 设置键盘事件监听
+   * Android: 减小心电图高度，防止输入面板被挤压
+   * iOS: 固定定位输入面板，动态设置 bottom
+   */
+  private setupKeyboardListeners() {
+    const api = window.api;
+    if (!api || !api.addEventListener) {
+      console.warn('[MobileApp] API 不可用，跳过键盘监听');
+      return;
+    }
+
+    const inputSection = document.querySelector('.input-section') as HTMLElement;
+
+    if (!inputSection) {
+      console.warn('[MobileApp] 找不到布局元素');
+      return;
+    }
+
+    // 键盘弹出：输入面板浮动到键盘上方
+    api.addEventListener({ name: 'keyboardshow' }, (ret: { h: number }) => {
+      var keyboardHeight = ret.h;
+      console.log('[MobileApp] 键盘弹出，高度:', keyboardHeight, '系统:', this.systemType);
+
+      inputSection.style.position = 'fixed';
+      inputSection.style.left = '0';
+      inputSection.style.right = '0';
+      // Android 系统自己挤压页面，bottom 设 0 即可；iOS 需要手动抬高
+      inputSection.style.bottom = (this.systemType === 'android' ? 0 : keyboardHeight) + 'px';
+      inputSection.style.flex = 'none';
+    });
+
+    // 键盘收起：恢复输入面板定位
+    api.addEventListener({ name: 'keyboardhide' }, () => {
+      console.log('[MobileApp] 键盘收起');
+
+      inputSection.style.position = '';
+      inputSection.style.left = '';
+      inputSection.style.right = '';
+      inputSection.style.bottom = '';
+      inputSection.style.flex = '';
+    });
   }
 
   /**

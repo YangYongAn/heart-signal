@@ -136,6 +136,25 @@ export class SimpleDanmakuManager {
   }
 
   /**
+   * 解析文本中的 QQ emoji 标记
+   */
+  private parseEmoji(text: string): string {
+    // 转义 HTML 特殊字符
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    // 替换 [qq-emoji:id] 为 img 标签
+    return escaped.replace(/\[qq-emoji:(\d+)\]/g, (match, id) => {
+      const url = 'https://koishi.js.org/QFace/assets/qq_emoji/' + id + '/apng/' + id + '.png';
+      return '<img src="' + url + '" alt="" style="width: 20px; height: 20px; vertical-align: middle; margin-left: 4px;">';
+    });
+  }
+
+  /**
    * 显示单条弹幕
    */
   private displayDanmaku(data: DanmakuData) {
@@ -149,7 +168,9 @@ export class SimpleDanmakuManager {
     avatar.onerror = () => {
       avatar.src = '';
     };
-    content.textContent = data.content;
+
+    // 解析并渲染 QQ emoji
+    content.innerHTML = this.parseEmoji(data.content);
 
     // 如果是快捷语，调整样式
     if (data.isQuickPhrase) {

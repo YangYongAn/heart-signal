@@ -36,7 +36,25 @@ interface ESNAPI {
    * 设置窗口属性
    * 仅 iOS 生效
    */
-  setWinAttr(options: { softInputMode?: 'pan' | 'resize' | 'auto'; softInputBarEnabled?: boolean }): void;
+  setWinAttr(options: { softInputMode?: 'pan' | 'resize' | 'auto'; softInputBarEnabled?: boolean; bounces?: boolean }): void;
+
+  /**
+   * 添加事件监听
+   */
+  addEventListener(
+    options: { name: string },
+    callback: (ret: any, err: any) => void
+  ): void;
+
+  /**
+   * 移除事件监听
+   */
+  removeEventListener(options: { name: string }): void;
+
+  /**
+   * 系统类型
+   */
+  systemType: 'ios' | 'android';
 }
 
 /**

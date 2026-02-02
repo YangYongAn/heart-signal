@@ -21,7 +21,7 @@ export class SimplifiedECGRenderer {
     window.addEventListener('resize', () => this.resize());
   }
 
-  private resize() {
+  resize() {
     const rect = this.canvas.getBoundingClientRect();
     this.canvas.width = rect.width;
     this.canvas.height = rect.height;
