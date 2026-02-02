@@ -275,7 +275,8 @@ class App {
 
     const bpmEl = document.getElementById('bpm-value');
     if (bpmEl) {
-      bpmEl.textContent = this.currentBPM.toString();
+      // 死亡模式下显示 "--"
+      bpmEl.textContent = this.currentBPM === 0 ? '--' : this.currentBPM.toString();
       this.lastDisplayedBPM = this.currentBPM;
     }
   }
