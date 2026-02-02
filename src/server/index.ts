@@ -87,6 +87,22 @@ const server = Bun.serve({
       });
     }
 
+    // 提供歌词文件
+    if (url.pathname === '/music_lyric.txt') {
+      const file = Bun.file('./assets/music_lyric.txt');
+      const exists = await file.exists();
+
+      if (!exists) {
+        return new Response('Lyrics file not found', { status: 404 });
+      }
+
+      return new Response(file, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+        },
+      });
+    }
+
     return new Response('Not Found', { status: 404 });
   },
 

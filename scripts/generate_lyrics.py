@@ -7,18 +7,18 @@
 import whisper
 import json
 import sys
+import os
 
-def generate_lyrics_from_audio(audio_file_path, output_file='lyrics.json'):
+def generate_lyrics_from_audio(audio_file_path):
     """
     从音频文件生成歌词和逐字时间轴
 
     Args:
         audio_file_path: 音频文件路径
-        output_file: 输出 JSON 文件路径
     """
     print(f"加载 Whisper 模型...")
-    # 使用 tiny 模型（最小，~1GB）
-    # 其他可选: base (~1GB), small (~2GB), medium (~5GB), large (~10GB)
+    # 使用 tiny 模型（最小，~72MB）
+    # 其他可选: base (~142MB), small (~461MB), medium (~1.5GB), large (~2.9GB)
     model = whisper.load_model("tiny")
 
     print(f"分析音频文件: {audio_file_path}")
@@ -48,23 +48,60 @@ def generate_lyrics_from_audio(audio_file_path, output_file='lyrics.json'):
                     })
                     start += char_duration
 
-    # 保存为 JSON
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(lyrics, f, ensure_ascii=False, indent=2)
+    # 生成输出文件路径（在音频文件同目录）
+    audio_dir = os.path.dirname(os.path.abspath(audio_file_path))
+    audio_basename = os.path.splitext(os.path.basename(audio_file_path))[0]
+    txt_output = os.path.join(audio_dir, f"{audio_basename}_lyric.txt")
 
-    print(f"歌词已保存到: {output_file}")
-    print(f"共 {len(lyrics)} 个字符")
+    # 输出文本格式（主要格式）
+    text_format = lyrics_to_text_format(lyrics)
+    with open(txt_output, 'w', encoding='utf-8') as f:
+        f.write(text_format)
 
-    # 同时输出 TypeScript 格式
-    ts_output = output_file.replace('.json', '.ts')
-    with open(ts_output, 'w', encoding='utf-8') as f:
-        f.write("export const LYRICS = ")
-        f.write(json.dumps(lyrics, ensure_ascii=False, indent=2))
-        f.write(";\n")
+    print(f"\n✅ 歌词已保存到: {txt_output}")
+    print(f"📊 共 {len(lyrics)} 个字符")
 
-    print(f"TypeScript 格式已保存到: {ts_output}")
+    # 预览文本格式
+    lines = text_format.split('\n')
+    print(f"\n📝 文本格式预览（共 {len(lines)} 句）:")
+    print("-" * 50)
+    for i, line in enumerate(lines[:3]):
+        print(f"  {line}")
+    if len(lines) > 3:
+        print(f"  ... 还有 {len(lines) - 3} 句")
+    print("-" * 50)
 
     return lyrics
+
+
+def lyrics_to_text_format(lyrics):
+    """将歌词转换为文本格式: 字(startTime+duration)字(startTime+duration)..."""
+    lines = []
+    current_line = ""
+    prev_end_time = None
+
+    for lyric_char in lyrics:
+        char = lyric_char['char']
+        start_time = lyric_char['startTime']
+        duration = lyric_char['duration']
+        end_time = start_time + duration
+
+        # 检查是否有间隙（衔接不上）
+        if prev_end_time is not None and abs(prev_end_time - start_time) > 0.01:
+            # 有间隙，换新行（新句子）
+            if current_line:
+                lines.append(current_line)
+            current_line = ""
+
+        # 添加字和时间信息
+        current_line += f"{char}({start_time:.2f}+{duration:.2f})"
+        prev_end_time = end_time
+
+    # 添加最后一行
+    if current_line:
+        lines.append(current_line)
+
+    return '\n'.join(lines)
 
 
 def print_lyrics_preview(lyrics, max_lines=10):
@@ -80,14 +117,15 @@ def print_lyrics_preview(lyrics, max_lines=10):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("使用方法: python generate_lyrics.py <音频文件路径> [输出文件名]")
+        print("使用方法: python3 generate_lyrics.py <音频文件路径>")
         print("\n示例:")
-        print("  python generate_lyrics.py ../assets/music.wav")
-        print("  python generate_lyrics.py song.mp3 my_lyrics.json")
+        print("  python3 generate_lyrics.py ../assets/music.wav")
+        print("  → 自动生成: ../assets/music_lyric.txt")
+        print("\n  python3 generate_lyrics.py song.mp3")
+        print("  → 自动生成: song_lyric.txt")
         sys.exit(1)
 
     audio_file = sys.argv[1]
-    output_file = sys.argv[2] if len(sys.argv) > 2 else 'lyrics.json'
 
-    lyrics = generate_lyrics_from_audio(audio_file, output_file)
+    lyrics = generate_lyrics_from_audio(audio_file)
     print_lyrics_preview(lyrics)

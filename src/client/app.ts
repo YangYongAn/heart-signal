@@ -20,23 +20,48 @@ interface LyricChar {
 }
 
 /**
- * 示例歌词数据 - 每个字都有时间轴信息
- * 可以通过 Python 脚本自动生成
+ * 解析文本格式的歌词
+ * 格式: 字(startTime+duration)字(startTime+duration)...
+ * 换行表示新句子
  */
-const LYRICS: LyricChar[] = [
-  { char: '在', startTime: 0, duration: 0.3 },
-  { char: '你', startTime: 0.3, duration: 0.3 },
-  { char: '心', startTime: 0.6, duration: 0.3 },
-  { char: '中', startTime: 0.9, duration: 0.3 },
-  { char: '我', startTime: 1.2, duration: 0.3 },
-  { char: '是', startTime: 1.5, duration: 0.3 },
-  { char: '谁', startTime: 1.8, duration: 0.6 },
-  { char: '是', startTime: 2.5, duration: 0.3 },
-  { char: '你', startTime: 2.8, duration: 0.3 },
-  { char: '的', startTime: 3.1, duration: 0.3 },
-  { char: '一', startTime: 3.4, duration: 0.3 },
-  { char: '切', startTime: 3.7, duration: 0.8 }
-];
+function parseLyricsText(text: string): LyricChar[] {
+  const lyrics: LyricChar[] = [];
+  const lines = text.trim().split('\n');
+
+  for (const line of lines) {
+    // 匹配 字(time+duration) 格式
+    const regex = /(.)\((\d+\.?\d*)\+(\d+\.?\d*)\)/g;
+    let match;
+
+    while ((match = regex.exec(line)) !== null) {
+      lyrics.push({
+        char: match[1],
+        startTime: parseFloat(match[2]),
+        duration: parseFloat(match[3])
+      });
+    }
+  }
+
+  return lyrics;
+}
+
+/**
+ * 从服务器加载歌词文本
+ */
+async function loadLyricsFromServer(): Promise<LyricChar[]> {
+  try {
+    const response = await fetch('/music_lyric.txt');
+    if (!response.ok) {
+      console.warn('歌词文件未找到，请运行: python3 scripts/generate_lyrics.py assets/music.wav');
+      return [];
+    }
+    const text = await response.text();
+    return parseLyricsText(text);
+  } catch (error) {
+    console.error('加载歌词失败:', error);
+    return [];
+  }
+}
 
 /**
  * 模式配置
@@ -320,10 +345,18 @@ class LyricsManager {
   private startTime = 0;
   private lyricsContainer: HTMLElement | null = null;
   private lyricsLine: HTMLElement | null = null;
+  private lyrics: LyricChar[] = [];
 
   constructor() {
     this.lyricsContainer = document.getElementById('lyrics-container') as HTMLElement | null;
     this.lyricsLine = document.getElementById('lyrics-line') as HTMLElement | null;
+  }
+
+  /**
+   * 加载歌词数据
+   */
+  async loadLyrics() {
+    this.lyrics = await loadLyricsFromServer();
     this.renderAllLyrics();
   }
 
@@ -341,14 +374,14 @@ class LyricsManager {
   }
 
   updateLyrics() {
-    if (!this.lyricsLine) return;
+    if (!this.lyricsLine || this.lyrics.length === 0) return;
 
     const elapsed = Date.now() / 1000 - this.startTime;
 
     // 更新每个字的填色状态
     const chars = this.lyricsLine.querySelectorAll('.char');
     for (let i = 0; i < chars.length; i++) {
-      const lyricChar = LYRICS[i];
+      const lyricChar = this.lyrics[i];
       if (!lyricChar) continue;
 
       // 检查当前字是否应该填色
@@ -374,7 +407,7 @@ class LyricsManager {
     if (!this.lyricsLine) return;
 
     this.lyricsLine.innerHTML = '';
-    for (const lyricChar of LYRICS) {
+    for (const lyricChar of this.lyrics) {
       const span = document.createElement('span');
       span.className = 'char';
       span.textContent = lyricChar.char;
@@ -754,12 +787,15 @@ class App {
     this.init();
   }
 
-  private init() {
+  private async init() {
     this.ecg.startRendering();
     this.ws.connect();
     this.setupKeyboardEvents();
     this.updateModeDisplay();
     this.updateBPM(); // 初始化 BPM 显示
+
+    // 异步加载歌词
+    await this.lyricsManager.loadLyrics();
 
     // 启动统一的心电图波形循环（始终运行）
     this.startECGLoop();
