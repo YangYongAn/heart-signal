@@ -76,6 +76,13 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
+    .shortcut-emoji {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      image-rendering: crisp-edges;
+    }
+
     .shortcut kbd {
       background: #222;
       padding: 3px 8px;
@@ -136,16 +143,22 @@
     }
 
     .mode-display {
-      font-size: 1.5rem;
-      padding: 8px 24px;
-      border-radius: 25px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
     }
 
     #current-mode {
-      color: #ff4757;
-      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #current-mode img {
+      width: 68px;
+      height: 68px;
+      image-rendering: crisp-edges;
     }
 
     .bpm-display {
@@ -253,7 +266,7 @@
       <div class="header-left">
         <h1 class="title" id="title">Heart Signal</h1>
         <div class="mode-display">
-          <span id="current-mode">💓</span>
+          <span id="current-mode"></span>
         </div>
       </div>
       <div class="bpm-display">
@@ -274,19 +287,23 @@
     <div class="shortcuts">
       <div class="shortcut">
         <kbd>Enter</kbd>
-        <span>⚡ 激动</span>
+        <img src="https://koishi.js.org/QFace/assets/qq_emoji/312/apng/312.png" alt="激动" class="shortcut-emoji">
+        <span>激动</span>
       </div>
       <div class="shortcut">
         <kbd>Backspace</kbd>
-        <span>💀 死亡</span>
+        <img src="https://koishi.js.org/QFace/assets/qq_emoji/284/apng/284.png" alt="死亡" class="shortcut-emoji">
+        <span>死亡</span>
       </div>
       <div class="shortcut">
         <kbd>Space</kbd>
-        <span>🎵 音乐</span>
+        <img src="https://koishi.js.org/QFace/assets/qq_emoji/332/apng/332.png" alt="音乐" class="shortcut-emoji">
+        <span>音乐</span>
       </div>
       <div class="shortcut">
         <kbd>Esc</kbd>
-        <span>💓 正常</span>
+        <img src="https://koishi.js.org/QFace/assets/qq_emoji/8/apng/8.png" alt="正常" class="shortcut-emoji">
+        <span>正常</span>
       </div>
     </div>
 

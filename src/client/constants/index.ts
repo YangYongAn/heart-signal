@@ -91,3 +91,13 @@ export const LYRICS_FILE_PATH = '/music_lyric.txt';
  * 最大 ECG 数据点数
  */
 export const MAX_ECG_POINTS = 200;
+
+/**
+ * 模式对应的 QQ emoji 图片 URL
+ */
+export const MODE_EMOJI_URLS: Record<ECGMode, string> = {
+  [ECGMode.NORMAL]: 'https://koishi.js.org/QFace/assets/qq_emoji/8/apng/8.png',
+  [ECGMode.EXCITED]: 'https://koishi.js.org/QFace/assets/qq_emoji/312/apng/312.png',
+  [ECGMode.DEATH]: 'https://koishi.js.org/QFace/assets/qq_emoji/284/apng/284.png',
+  [ECGMode.MUSIC]: 'https://koishi.js.org/QFace/assets/qq_emoji/332/apng/332.png'
+};

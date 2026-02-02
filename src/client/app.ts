@@ -1,6 +1,6 @@
 import type { WSMessage } from '../shared/types';
 import { ECGMode } from './types';
-import { MODE_CONFIGS } from './constants';
+import { MODE_CONFIGS, MODE_EMOJI_URLS } from './constants';
 import { ECGRenderer } from './classes/ECGRenderer';
 import { ECGWaveGenerator } from './classes/ECGWaveGenerator';
 import { WSClient } from './classes/WSClient';
@@ -25,6 +25,7 @@ class App {
   private currentMode: ECGMode = ECGMode.NORMAL;
   private ecgInterval?: ReturnType<typeof setInterval>;
   private musicInterval?: ReturnType<typeof setInterval>;
+  private modeEmojiImg?: HTMLImageElement;
 
   constructor() {
     this.ecg = new ECGRenderer('ecg-canvas', ECGMode.NORMAL);
@@ -42,6 +43,7 @@ class App {
   }
 
   private async init() {
+    this.preloadEmojiImages();
     this.ecg.startRendering();
     this.ws.connect();
     this.setupKeyboardEvents();
@@ -49,6 +51,18 @@ class App {
     this.updateBPM();
     await this.lyricsManager.loadLyrics();
     this.startECGLoop();
+  }
+
+  /**
+   * 预加载所有模式的 emoji 图片
+   */
+  private preloadEmojiImages() {
+    Object.values(MODE_EMOJI_URLS).forEach(url => {
+      const img = new Image();
+      // 添加 crossorigin 属性确保跨域图片正确缓存
+      img.crossOrigin = 'anonymous';
+      img.src = url;
+    });
   }
 
   /**
@@ -117,8 +131,11 @@ class App {
 
     const prevMode = this.currentMode;
     this.currentMode = mode;
-    this.ecg.setMode(mode);
+
+    // 立即更新显示，确保视觉反馈最快
     this.updateModeDisplay();
+
+    this.ecg.setMode(mode);
 
     if (prevMode === ECGMode.MUSIC) {
       this.lyricsManager.stop();
@@ -279,8 +296,17 @@ class App {
 
     const modeEl = document.getElementById('current-mode');
     if (modeEl) {
-      modeEl.textContent = config.name;
-      modeEl.style.color = config.color;
+      // 如果还没有创建过 img 元素，则创建一次
+      if (!this.modeEmojiImg) {
+        this.modeEmojiImg = document.createElement('img');
+        this.modeEmojiImg.crossOrigin = 'anonymous';
+        modeEl.appendChild(this.modeEmojiImg);
+      }
+
+      // 只更新 src，避免重新创建元素导致闪烁
+      const emojiUrl = MODE_EMOJI_URLS[this.currentMode];
+      this.modeEmojiImg.src = emojiUrl;
+      this.modeEmojiImg.alt = this.currentMode;
     }
 
     const titleEl = document.getElementById('title');
