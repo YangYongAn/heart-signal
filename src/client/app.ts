@@ -105,22 +105,35 @@ class App {
 
   private setupKeyboardEvents() {
     window.addEventListener('keydown', (e) => {
-      switch (e.key) {
-        case 'Enter':
+      switch (e.key.toLowerCase()) {
+        case 'enter':
           this.switchMode(ECGMode.EXCITED);
           break;
-        case 'Backspace':
+        case 'backspace':
           this.switchMode(ECGMode.DEATH);
           break;
         case ' ':
           e.preventDefault();
           this.switchMode(ECGMode.MUSIC);
           break;
-        case 'Escape':
+        case 'escape':
           this.switchMode(ECGMode.NORMAL);
+          break;
+        case 'f':
+          this.toggleFullscreen();
           break;
       }
     });
+  }
+
+  private toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {
+        console.log('全屏请求被拒绝');
+      });
+    } else {
+      document.exitFullscreen();
+    }
   }
 
   /**
